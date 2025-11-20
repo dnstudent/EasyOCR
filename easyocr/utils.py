@@ -18,6 +18,7 @@ else:
     from urllib.request import urlretrieve
 
 def consecutive(data, mode ='first', stepsize=1):
+    """Group consecutive values in ``data`` and return either first or last indices."""
     group = np.split(data, np.where(np.diff(data) != stepsize)[0]+1)
     group = [item for item in group if len(item)>0]
 
@@ -26,6 +27,7 @@ def consecutive(data, mode ='first', stepsize=1):
     return result
 
 def word_segmentation(mat, separator_idx =  {'th': [1,2],'en': [3,4]}, separator_idx_list = [1,2,3,4]):
+    """Extract word spans from a matrix of separator indices."""
     result = []
     sep_list = []
     start_idx = 0
@@ -60,6 +62,7 @@ def word_segmentation(mat, separator_idx =  {'th': [1,2],'en': [3,4]}, separator
 class BeamEntry:
     "information about one single beam at specific time-step"
     def __init__(self):
+        """Initialize probability accumulators for a single beam."""
         self.prTotal = 0 # blank and non-blank
         self.prNonBlank = 0 # non-blank
         self.prBlank = 0 # blank
@@ -71,6 +74,7 @@ class BeamEntry:
 class BeamState:
     "information about the beams at specific time-step"
     def __init__(self):
+        """Create an empty container for beam entries at a given timestep."""
         self.entries = {}
 
     def norm(self):
