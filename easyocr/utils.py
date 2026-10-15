@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import torch
 import pickle
 import numpy as np
@@ -11,7 +9,20 @@ import hashlib
 import sys, os
 from zipfile import ZipFile
 from urllib.request import urlretrieve
+from collections import OrderedDict
 from .imgproc import loadImage
+
+def copyStateDict(state_dict):
+    """Drop the 'module.' prefix that DataParallel wrapping adds to checkpoint keys."""
+    if list(state_dict.keys())[0].startswith("module"):
+        start_idx = 1
+    else:
+        start_idx = 0
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        name = ".".join(k.split(".")[start_idx:])
+        new_state_dict[name] = v
+    return new_state_dict
 
 def consecutive(data, mode ='first', stepsize=1):
     """Group consecutive values in ``data`` and return either first or last indices."""

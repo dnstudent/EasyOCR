@@ -5,9 +5,8 @@ import torch.utils.data
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 import numpy as np
-from collections import OrderedDict
 import importlib
-from .utils import CTCLabelConverter
+from .utils import CTCLabelConverter, copyStateDict
 import math
 
 def custom_mean(x):
@@ -164,22 +163,18 @@ def get_recognizer(recog_network, network_params, character,\
     else:
         model_pkg = importlib.import_module(recog_network)
     model = model_pkg.Model(num_class=num_class, **network_params)
+    model.load_state_dict(copyStateDict(torch.load(model_path, map_location=device, weights_only=False)))
 
     if device == 'cpu':
-        state_dict = torch.load(model_path, map_location=device, weights_only=False)
-        new_state_dict = OrderedDict()
-        for key, value in state_dict.items():
-            new_key = key[7:]
-            new_state_dict[new_key] = value
-        model.load_state_dict(new_state_dict)
         if quantize:
             try:
                 torch.ao.quantization.quantize_dynamic(model, dtype=torch.qint8, inplace=True)
             except:
                 pass
     else:
-        model = torch.nn.DataParallel(model).to(device)
-        model.load_state_dict(torch.load(model_path, map_location=device, weights_only=False))
+        model = model.to(device)
+        if device == 'cuda' and torch.cuda.device_count() > 1:
+            model = torch.nn.DataParallel(model)
 
     return model, converter
 
@@ -200,7 +195,7 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
     test_data = ListDataset(img_list)
     test_loader = torch.utils.data.DataLoader(
         test_data, batch_size=batch_size, shuffle=False,
-        num_workers=int(workers), collate_fn=AlignCollate_normal, pin_memory=True)
+        num_workers=int(workers), collate_fn=AlignCollate_normal, pin_memory=(device == 'cuda'))
 
     # predict first round
     result1 = recognizer_predict(recognizer, converter, test_loader,batch_max_length,\
@@ -214,7 +209,7 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
         test_data = ListDataset(img_list2)
         test_loader = torch.utils.data.DataLoader(
                         test_data, batch_size=batch_size, shuffle=False,
-                        num_workers=int(workers), collate_fn=AlignCollate_contrast, pin_memory=True)
+                        num_workers=int(workers), collate_fn=AlignCollate_contrast, pin_memory=(device == 'cuda'))
         result2 = recognizer_predict(recognizer, converter, test_loader, batch_max_length,\
                                      ignore_idx, char_group_idx, decoder, beamWidth, device = device)
 

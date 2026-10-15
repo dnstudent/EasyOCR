@@ -1,24 +1,13 @@
 import torch
 import torch.backends.cudnn as cudnn
 from PIL import Image
-from collections import OrderedDict
 
 import cv2
 import numpy as np
 from .craft_utils import getDetBoxes, adjustResultCoordinates
 from .imgproc import resize_aspect_ratio, normalizeMeanVariance
 from .craft import CRAFT
-
-def copyStateDict(state_dict):
-    if list(state_dict.keys())[0].startswith("module"):
-        start_idx = 1
-    else:
-        start_idx = 0
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        name = ".".join(k.split(".")[start_idx:])
-        new_state_dict[name] = v
-    return new_state_dict
+from .utils import copyStateDict
 
 def test_net(canvas_size, mag_ratio, net, image, text_threshold, link_threshold, low_text, poly, device, estimate_num_chars=False):
     if isinstance(image, np.ndarray) and len(image.shape) == 4:  # image is batch of np arrays
@@ -72,18 +61,20 @@ def test_net(canvas_size, mag_ratio, net, image, text_threshold, link_threshold,
 
 def get_detector(trained_model, device='cpu', quantize=True, cudnn_benchmark=False):
     net = CRAFT()
+    net.load_state_dict(copyStateDict(torch.load(trained_model, map_location=device, weights_only=False)))
 
     if device == 'cpu':
-        net.load_state_dict(copyStateDict(torch.load(trained_model, map_location=device, weights_only=False)))
         if quantize:
             try:
                 torch.ao.quantization.quantize_dynamic(net, dtype=torch.qint8, inplace=True)
             except:
                 pass
     else:
-        net.load_state_dict(copyStateDict(torch.load(trained_model, map_location=device, weights_only=False)))
-        net = torch.nn.DataParallel(net).to(device)
-        cudnn.benchmark = cudnn_benchmark
+        net = net.to(device)
+        if device == 'cuda':
+            cudnn.benchmark = cudnn_benchmark
+            if torch.cuda.device_count() > 1:
+                net = torch.nn.DataParallel(net)
 
     net.eval()
     return net

@@ -139,8 +139,11 @@ def get_detector(trained_model, backbone = 'resnet18', device='cpu', quantize=Tr
             except:
                 pass
     else:
-        dbnet.model = torch.nn.DataParallel(dbnet.model).to(device)
-        cudnn.benchmark = cudnn_benchmark
+        dbnet.model = dbnet.model.to(device)
+        if device == 'cuda':
+            cudnn.benchmark = cudnn_benchmark
+            if torch.cuda.device_count() > 1:
+                dbnet.model = torch.nn.DataParallel(dbnet.model)
     
     dbnet.model.eval()
 
