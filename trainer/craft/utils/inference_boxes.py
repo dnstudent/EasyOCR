@@ -6,7 +6,6 @@ import cv2
 import time
 import numpy as np
 import torch
-from torch.autograd import Variable
 
 from utils.craft_utils import getDetBoxes, adjustResultCoordinates
 from data import imgproc
@@ -234,7 +233,7 @@ def load_icdar2015_gt(dataFolder, isTraing=False):
             word = ",".join(word)
             box_points = np.array(box_points, np.int32).reshape(4, 2)
             cv2.polylines(
-                image, [np.array(box_points).astype(np.int)], True, (0, 0, 255), 1
+                image, [box_points], True, (0, 0, 255), 1
             )
             box_info_dict["points"] = box_points
             box_info_dict["text"] = word
@@ -323,7 +322,7 @@ def test_net(
     # preprocessing
     x = imgproc.normalizeMeanVariance(img_resized)
     x = torch.from_numpy(x).permute(2, 0, 1)  # [h, w, c] to [c, h, w]
-    x = Variable(x.unsqueeze(0))  # [c, h, w] to [b, c, h, w]
+    x = x.unsqueeze(0)  # [c, h, w] to [b, c, h, w]
     if cuda:
         x = x.cuda()
 
@@ -332,8 +331,8 @@ def test_net(
         y, feature = net(x)
 
     # make score and link map
-    score_text = y[0, :, :, 0].cpu().data.numpy().astype(np.float32)
-    score_link = y[0, :, :, 1].cpu().data.numpy().astype(np.float32)
+    score_text = y[0, :, :, 0].cpu().numpy().astype(np.float32)
+    score_link = y[0, :, :, 1].cpu().numpy().astype(np.float32)
 
     # NOTE
     score_text = score_text[: size_heatmap[0], : size_heatmap[1]]

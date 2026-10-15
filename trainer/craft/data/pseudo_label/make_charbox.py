@@ -91,8 +91,13 @@ class PseudoCharBoxBuilder:
                 )
             )
             word_img_torch = word_img_torch.permute(2, 0, 1).unsqueeze(0)
-            word_img_torch = word_img_torch.type(torch.FloatTensor).cuda(gpu)
-            with torch.cuda.amp.autocast():
+            # ``gpu`` is a CUDA index from the DDP trainers or a torch.device elsewhere
+            device = gpu if isinstance(gpu, torch.device) else torch.device(f"cuda:{gpu}")
+            word_img_torch = word_img_torch.to(device)
+            if device.type == "cuda":
+                with torch.amp.autocast("cuda"):
+                    word_img_scores, _ = net(word_img_torch)
+            else:
                 word_img_scores, _ = net(word_img_torch)
         return word_img_scores
 
@@ -218,7 +223,7 @@ class PseudoCharBoxBuilder:
         word_img_h, word_img_w, _ = word_image.shape
 
         scores = self.inference_word_box(net, gpu, word_image)
-        region_score = scores[0, :, :, 0].cpu().data.numpy()
+        region_score = scores[0, :, :, 0].cpu().numpy()
         region_score = np.uint8(np.clip(region_score, 0, 1) * 255)
 
         region_score_rgb = cv2.resize(region_score, (word_img_w, word_img_h))

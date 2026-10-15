@@ -320,8 +320,8 @@ def save_outputs_from_tensors(images, region_scores, affinity_scores, text_thres
     if type(images) == torch.Tensor:
         images = np.array(images)
 
-    region_scores = region_scores.cpu().data.numpy()
-    affinity_scores = affinity_scores.cpu().data.numpy()
+    region_scores = region_scores.cpu().numpy()
+    affinity_scores = affinity_scores.cpu().numpy()
 
     batch_size = images.shape[0]
     assert batch_size == region_scores.shape[0] and batch_size == affinity_scores.shape[0] and batch_size == len(image_names), \
