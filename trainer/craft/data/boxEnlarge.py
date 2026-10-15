@@ -1,4 +1,5 @@
 import math
+
 import numpy as np
 
 
@@ -20,7 +21,7 @@ def getX(K, B, Ypoint):
 
 def sidePoint(Apoint, Bpoint, h, w, placehold, enlarge_size):
 
-    K, B = lineBiasAndK(Apoint, Bpoint)
+    _K, _B = lineBiasAndK(Apoint, Bpoint)
     angle = abs(math.atan(pointAngle(Apoint, Bpoint)))
     distance = pointDistance(Apoint, Bpoint)
 

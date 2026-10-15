@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import argparse
 import os
@@ -6,21 +5,19 @@ import os
 import cv2
 import numpy as np
 import torch
-import torch.backends.cudnn as cudnn
-from tqdm import tqdm
 import wandb
-
-from config.load_config import load_yaml, DotDict
-from model.craft import CRAFT
+from config.load_config import DotDict, load_yaml
 from metrics.eval_det_iou import DetectionIoUEvaluator
+from model.craft import CRAFT
+from torch.backends import cudnn
+from tqdm import tqdm
 from utils.inference_boxes import (
-    test_net,
-    load_icdar2015_gt,
     load_icdar2013_gt,
+    load_icdar2015_gt,
     load_synthtext_gt,
+    test_net,
 )
 from utils.util import copyStateDict
-
 
 
 def save_result_synth(img_file, img, pre_output, pre_box, gt_box=None, result_dir=""):
@@ -31,17 +28,17 @@ def save_result_synth(img_file, img, pre_output, pre_box, gt_box=None, result_di
     affinity = pre_output[1]
 
     # make result file list
-    filename, file_ext = os.path.splitext(os.path.basename(img_file))
+    filename, _file_ext = os.path.splitext(os.path.basename(img_file))
 
     # draw bounding boxes for prediction, color green
     for i, box in enumerate(pre_box):
-        poly = np.array(box).astype(np.int32).reshape((-1))
+        poly = np.array(box).astype(np.int32).reshape(-1)
         poly = poly.reshape(-1, 2)
         try:
             cv2.polylines(
                 img, [poly.reshape((-1, 1, 2))], True, color=(0, 255, 0), thickness=2
             )
-        except:
+        except (RuntimeError, ValueError, TypeError):
             pass
 
     # draw bounding boxes for gt, color red
@@ -74,16 +71,16 @@ def save_result_2015(img_file, img, pre_output, pre_box, gt_box, result_dir):
     affinity = pre_output[1]
 
     # make result file list
-    filename, file_ext = os.path.splitext(os.path.basename(img_file))
+    filename, _file_ext = os.path.splitext(os.path.basename(img_file))
 
     for i, box in enumerate(pre_box):
-        poly = np.array(box).astype(np.int32).reshape((-1))
+        poly = np.array(box).astype(np.int32).reshape(-1)
         poly = poly.reshape(-1, 2)
         try:
             cv2.polylines(
                 img, [poly.reshape((-1, 1, 2))], True, color=(0, 255, 0), thickness=2
             )
-        except:
+        except (RuntimeError, ValueError, TypeError):
             pass
 
     if gt_box is not None:
@@ -113,17 +110,17 @@ def save_result_2013(img_file, img, pre_output, pre_box, gt_box=None, result_dir
     affinity = pre_output[1]
 
     # make result file list
-    filename, file_ext = os.path.splitext(os.path.basename(img_file))
+    filename, _file_ext = os.path.splitext(os.path.basename(img_file))
 
     # draw bounding boxes for prediction, color green
     for i, box in enumerate(pre_box):
-        poly = np.array(box).astype(np.int32).reshape((-1))
+        poly = np.array(box).astype(np.int32).reshape(-1)
         poly = poly.reshape(-1, 2)
         try:
             cv2.polylines(
                 img, [poly.reshape((-1, 1, 2))], True, color=(0, 255, 0), thickness=2
             )
-        except:
+        except (RuntimeError, ValueError, TypeError):
             pass
 
     # draw bounding boxes for gt, color red
@@ -150,7 +147,7 @@ def save_result_2013(img_file, img, pre_output, pre_box, gt_box=None, result_dir
 
 def overlay(image, region, affinity, single_img_bbox):
 
-    height, width, channel = image.shape
+    height, width, _channel = image.shape
 
     region_score = cv2.resize(region, (width, height))
     affinity_score = cv2.resize(affinity, (width, height))
@@ -185,12 +182,7 @@ def load_test_dataset_iou(test_folder_name, config):
             dataFolder=config.test_data_dir
         )
 
-    elif test_folder_name == "icdar2015":
-        total_bboxes_gt, total_img_path = load_icdar2015_gt(
-            dataFolder=config.test_data_dir
-        )
-
-    elif test_folder_name == "custom_data":
+    elif test_folder_name == "icdar2015" or test_folder_name == "custom_data":
         total_bboxes_gt, total_img_path = load_icdar2015_gt(
             dataFolder=config.test_data_dir
         )
@@ -212,11 +204,7 @@ def viz_test(img, pre_output, pre_box, gt_box, img_name, result_dir, test_folder
         save_result_2013(
             img_name, img[:, :, ::-1].copy(), pre_output, pre_box, gt_box, result_dir
         )
-    elif test_folder_name == "icdar2015":
-        save_result_2015(
-            img_name, img[:, :, ::-1].copy(), pre_output, pre_box, gt_box, result_dir
-        )
-    elif test_folder_name == "custom_data":
+    elif test_folder_name == "icdar2015" or test_folder_name == "custom_data":
         save_result_2015(
             img_name, img[:, :, ::-1].copy(), pre_output, pre_box, gt_box, result_dir
         )
@@ -334,7 +322,7 @@ def main_eval(model_path, backbone, config, evaluator, result_dir, buffer, model
 def cal_eval(config, data, res_dir_name, opt, mode):
     evaluator = DetectionIoUEvaluator()
     test_config = DotDict(config.test[data])
-    res_dir = os.path.join(os.path.join("exp", args.yaml), "{}".format(res_dir_name))
+    res_dir = os.path.join(os.path.join("exp", args.yaml), f"{res_dir_name}")
 
     if opt == "iou_eval":
         main_eval(

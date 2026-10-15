@@ -1,15 +1,14 @@
-from collections import OrderedDict
 import os
+from collections import OrderedDict
 
 import cv2
 import numpy as np
-
 from data import imgproc
 from utils import craft_utils
 
 
 def copyStateDict(state_dict):
-    if list(state_dict.keys())[0].startswith("module"):
+    if next(iter(state_dict.keys())).startswith("module"):
         start_idx = 1
     else:
         start_idx = 0
@@ -26,7 +25,7 @@ def saveInput(
     image = np.uint8(image.copy())
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-    boxes, polys = craft_utils.getDetBoxes(
+    boxes, _polys = craft_utils.getDetBoxes(
         region_scores, affinity_scores, 0.85, 0.2, 0.5, False
     )
 
@@ -45,7 +44,7 @@ def saveInput(
     confidence_mask_gray = imgproc.cvt2HeatmapImg(confidence_mask)
 
     # overlay
-    height, width, channel = image.shape
+    height, width, _channel = image.shape
     overlay_region = cv2.resize(target_gaussian_heatmap_color, (width, height))
     overlay_aff = cv2.resize(target_gaussian_affinity_heatmap_color, (width, height))
     confidence_mask_gray = cv2.resize(
@@ -107,7 +106,7 @@ def saveImage(
     confidence_mask_gray = imgproc.cvt2HeatmapImg(confidence_mask)
 
     # overlay
-    height, width, channel = image.shape
+    height, width, _channel = image.shape
     overlay_region = cv2.resize(target_gaussian_heatmap_color, (width, height))
     overlay_aff = cv2.resize(target_gaussian_affinity_heatmap_color, (width, height))
 
@@ -136,7 +135,7 @@ def save_parser(args):
         opt_log = "------------ Options -------------\n"
         arg = vars(args)
         for k, v in arg.items():
-            opt_log += f"{str(k)}: {str(v)}\n"
+            opt_log += f"{k!s}: {v!s}\n"
         opt_log += "---------------------------------------\n"
         print(opt_log)
         opt_file.write(opt_log)

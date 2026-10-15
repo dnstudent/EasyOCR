@@ -39,7 +39,7 @@ def exec_watershed_by_version(
         return func_name_map_dict[watershed_param.version](
             watershed_param, region_score, word_image, pseudo_vis_opt
         )
-    except:
+    except KeyError:
         print(
             f"Watershed version {watershed_param.version} does not exist in func_name_map_dict."
         )

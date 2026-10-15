@@ -55,7 +55,7 @@ def _validate_onnx(path, torch_outputs, ort_inputs):
             for torch_out, coreml_out in zip(torch_outputs, coreml_outputs):
                 np.testing.assert_allclose(torch_out, coreml_out, rtol=5e-2, atol=2e-2)
             print(f"CoreMLExecutionProvider validated (max abs diff vs torch: {max_diff:.2e})")
-    except Exception as e:
+    except (RuntimeError, ValueError) as e:
         # CoreML cannot compile every graph, e.g. the dynamic-width LSTM the
         # recognizer exports to; CPU validation above is the correctness gate
         print(f"note: CoreMLExecutionProvider could not run this graph ({type(e).__name__}); "
@@ -64,8 +64,8 @@ def _validate_onnx(path, torch_outputs, ort_inputs):
 
 
 def export_detector(detector_onnx_save_path,
-                    in_shape=[1, 3, 608, 800],
-                    lang_list=["en"],
+                    in_shape=None,
+                    lang_list=None,
                     model_storage_directory=None,
                     user_network_directory=None,
                     download_enabled=True,
@@ -74,10 +74,14 @@ def export_detector(detector_onnx_save_path,
                     quantize=False,
                     detector=True,
                     recognizer=True):
+    if lang_list is None:
+        lang_list = ["en"]
+    if in_shape is None:
+        in_shape = [1, 3, 608, 800]
     if dynamic is False:
         print('WARNING: it is recommended to use -d dynamic flag when exporting onnx')
     ocr_reader = easyocr.Reader(lang_list,
-                                gpu=False if device == "cpu" else True,
+                                gpu=device != "cpu",
                                 detector=detector,
                                 recognizer=detector,
                                 quantize=quantize,
@@ -124,7 +128,7 @@ def export_detector(detector_onnx_save_path,
 
 
 def export_recognizer(recognizer_onnx_save_path,
-                      lang_list=["en"],
+                      lang_list=None,
                       recog_network='standard',
                       model_storage_directory=None,
                       user_network_directory=None,
@@ -142,8 +146,10 @@ def export_recognizer(recognizer_onnx_save_path,
     sequence length into the graph, and CoreML only compiles the LSTM
     subgraph at a fixed sequence length.
     """
+    if lang_list is None:
+        lang_list = ["en"]
     ocr_reader = easyocr.Reader(lang_list,
-                                gpu=False if device == "cpu" else True,
+                                gpu=device != "cpu",
                                 detector=False,
                                 recognizer=True,
                                 quantize=quantize,
@@ -225,7 +231,7 @@ def parse_args():
         args.detector_onnx_save_path = None
     if len(args.in_shape) != 4:
         raise ValueError(
-            f"Input shape must have four values (bsize, channel, height, width) eg. 1 3 608 800")
+            "Input shape must have four values (bsize, channel, height, width) eg. 1 3 608 800")
     return args
 
 

@@ -5,17 +5,20 @@ Description:
 DBNet text detection module. 
 Many parts of the codes are adapted from https://github.com/MhLiao/DB
 '''
-import os
 import math
-import yaml
-from shapely.geometry import Polygon
-import PIL.Image
-import numpy as np
+import os
+
 import cv2
+import numpy as np
+import PIL.Image
 import pyclipper
 import torch
+import yaml
+from shapely.geometry import Polygon
 
 from .model.constructor import Configurable
+
+
 # %%
 class DBNet:
     def __init__(self, 
@@ -73,7 +76,7 @@ class DBNet:
         if dynamic_import_relative_path is not None:
             self.configs = self.set_relative_import_path(self.configs, dynamic_import_relative_path)
 
-        if backbone in self.configs.keys():
+        if backbone in self.configs:
             self.backbone = backbone
         else:
             raise ValueError("Invalid backbone. Current support backbone are {}.".format(",".join(self.configs.keys())))
@@ -84,7 +87,7 @@ class DBNet:
             self.weight_dir = os.path.join(os.path.dirname(__file__), 'weights')
 
         if initialize_model:
-            if weight_name in self.configs[backbone]['weight'].keys():
+            if weight_name in self.configs[backbone]['weight']:
                 weight_path = os.path.join(self.weight_dir, self.configs[backbone]['weight'][weight_name])
                 error_message = "A weight with a name {} is found in DBNet_inference.yaml but cannot be find file: {}."
             else:
@@ -219,7 +222,7 @@ class DBNet:
             if os.path.isfile(image):
                 image = cv2.imread(image, cv2.IMREAD_COLOR).astype('float32')
             else:
-                raise FileNotFoundError("Cannot find {}".format(image))
+                raise FileNotFoundError(f"Cannot find {image}")
         elif isinstance(image, np.ndarray):
             image = image.astype('float32')
         elif isinstance(image, PIL.Image.Image):
@@ -631,7 +634,7 @@ class DBNet:
     
     def get_mini_boxes(self, contour):
         bounding_box = cv2.minAreaRect(contour)
-        points = sorted(list(cv2.boxPoints(bounding_box)), key=lambda x: x[0])
+        points = sorted(cv2.boxPoints(bounding_box), key=lambda x: x[0])
     
         index_1, index_2, index_3, index_4 = 0, 1, 2, 3
         if points[1][1] > points[0][1]:

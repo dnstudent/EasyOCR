@@ -1,6 +1,7 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
+
 
 class ScaleChannelAttention(nn.Module):
     def __init__(self, in_planes, out_planes, num_features, init_weight=True):

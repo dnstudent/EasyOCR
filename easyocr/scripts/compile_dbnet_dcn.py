@@ -6,10 +6,11 @@ A wrapper for DCN operator for DBNet. This script is called inside the setup.py
 of EasyOCR. It can also be called as a standalone script to compile the operator
 manually.
 '''
-import os
 import glob
-from datetime import datetime
+import os
 import subprocess
+from datetime import datetime
+
 
 def print_error(errors, log_path): 
     if not isinstance(errors, list):
@@ -19,13 +20,13 @@ def print_error(errors, log_path):
     print("Failed to compile dcn operator for DBNet.")
     with open(log_path, "wb") as fid:
         fid.write((datetime.now().strftime("%H:%M:%S - %d %b %Y") + "\n").encode('utf-8'))
-        fid.write("Failed to compile dcn operator for DBNet with the following error.\n".encode('utf-8'))
+        fid.write(b"Failed to compile dcn operator for DBNet with the following error.\n")
         fid.write(("#"*42 + '\n').encode('utf-8'))
         [fid.write(error) for error in errors]
-    print("Error message can be found in {}.".format(os.path.abspath(log_path)))
+    print(f"Error message can be found in {os.path.abspath(log_path)}.")
     print("#"*42)
     print("EasyOCR can still be used with CRAFT text detector (default).")
-    print("To use DBNet text detector, please check {} for troubleshoot and compile dcn operator manually.".format(url))
+    print(f"To use DBNet text detector, please check {url} for troubleshoot and compile dcn operator manually.")
 
 def print_success(text, log_path):
     with open(log_path, "wb") as fid:
@@ -59,23 +60,23 @@ def main():
         print("Compiling DCN operators...")
         os.chdir(os.path.join(parent_dir,'DBNet','assets','ops','dcn'))
         result = subprocess.run(
-            "python setup.py build_ext --inplace", shell=True, capture_output = True
+            "python setup.py build_ext --inplace", shell=True, capture_output = True, check=False
         )
         if result.returncode == 0:
             os.chdir(os.path.join(parent_dir, 'DBNet'))
             if validate_compilation(parent_dir, log_path, 'cpu'):            
                 result = subprocess.run(
-                    "touch dcn_cpu_compiling_success", shell=True, capture_output = True
+                    "touch dcn_cpu_compiling_success", shell=True, capture_output = True, check=False
                 )
             if validate_compilation(parent_dir, log_path, 'cuda'):       
                 result = subprocess.run(
-                    "touch dcn_cuda_compiling_success", shell=True, capture_output = True
+                    "touch dcn_cuda_compiling_success", shell=True, capture_output = True, check=False
                 )
         else:
             print(result.__dict__)
             print_error([result.stdout, result.stderr], log_path)
-    except Exception as error:
-        print_error("{}".format(error), log_path)
+    except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+        print_error(f"{error}", log_path)
     finally:
         os.chdir(cwd)
 

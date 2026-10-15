@@ -1,4 +1,4 @@
-import torch.nn as nn
+from torch import nn
 
 
 class BidirectionalLSTM(nn.Module):
@@ -15,8 +15,7 @@ class BidirectionalLSTM(nn.Module):
         """
         try:
             self.rnn.flatten_parameters()
-        except:
-            pass
+        except (RuntimeError, ValueError, TypeError):            pass
         recurrent, _ = self.rnn(input)  # batch_size x T x input_size -> batch_size x T x (2*hidden_size)
         output = self.linear(recurrent)  # batch_size x T x output_size
         return output

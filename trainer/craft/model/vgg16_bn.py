@@ -1,7 +1,8 @@
 import torch
-import torch.nn as nn
-import torch.nn.init as init
+from torch import nn
+from torch.nn import init
 from torchvision import models
+
 
 def init_weights(modules):
     for m in modules:

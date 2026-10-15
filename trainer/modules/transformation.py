@@ -1,7 +1,8 @@
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -110,7 +111,7 @@ class GridGenerator(nn.Module):
     def _build_inv_delta_C(self, F, C):
         """ Return inv_delta_C which is needed to calculate T """
         hat_C = np.zeros((F, F), dtype=float)  # F x F
-        for i in range(0, F):
+        for i in range(F):
             for j in range(i, F):
                 r = np.linalg.norm(C[i] - C[j])
                 hat_C[i, j] = r

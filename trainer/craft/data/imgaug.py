@@ -3,9 +3,8 @@ import random
 import cv2
 import numpy as np
 from PIL import Image
-from torchvision.transforms.functional import resized_crop, crop
-from torchvision.transforms import RandomResizedCrop, RandomCrop
-from torchvision.transforms import InterpolationMode
+from torchvision.transforms import InterpolationMode, RandomCrop, RandomResizedCrop
+from torchvision.transforms.functional import crop, resized_crop
 
 
 def rescale(img, bboxes, target_size=2240):

@@ -1,13 +1,13 @@
-import torch
-import torch.backends.cudnn as cudnn
-from PIL import Image
-
 import cv2
 import numpy as np
-from .craft_utils import getDetBoxes, adjustResultCoordinates
-from .imgproc import resize_aspect_ratio, normalizeMeanVariance
+import torch
+from torch.backends import cudnn
+
 from .craft import CRAFT
+from .craft_utils import adjustResultCoordinates, getDetBoxes
+from .imgproc import normalizeMeanVariance, resize_aspect_ratio
 from .utils import copyStateDict
+
 
 def test_net(canvas_size, mag_ratio, net, image, text_threshold, link_threshold, low_text, poly, device, estimate_num_chars=False):
     if isinstance(image, np.ndarray) and len(image.shape) == 4:  # image is batch of np arrays
@@ -18,7 +18,7 @@ def test_net(canvas_size, mag_ratio, net, image, text_threshold, link_threshold,
     img_resized_list = []
     # resize
     for img in image_arrs:
-        img_resized, target_ratio, size_heatmap = resize_aspect_ratio(img, canvas_size,
+        img_resized, target_ratio, _size_heatmap = resize_aspect_ratio(img, canvas_size,
                                                                       interpolation=cv2.INTER_LINEAR,
                                                                       mag_ratio=mag_ratio)
         img_resized_list.append(img_resized)
@@ -31,7 +31,7 @@ def test_net(canvas_size, mag_ratio, net, image, text_threshold, link_threshold,
 
     # forward pass
     with torch.no_grad():
-        y, feature = net(x)
+        y, _feature = net(x)
 
     boxes_list, polys_list = [], []
     for out in y:
@@ -67,7 +67,7 @@ def get_detector(trained_model, device='cpu', quantize=True, cudnn_benchmark=Fal
         if quantize:
             try:
                 torch.ao.quantization.quantize_dynamic(net, dtype=torch.qint8, inplace=True)
-            except:
+            except (RuntimeError, ValueError):
                 pass
     else:
         net = net.to(device)
@@ -82,7 +82,7 @@ def get_detector(trained_model, device='cpu', quantize=True, cudnn_benchmark=Fal
 def get_textbox(detector, image, canvas_size, mag_ratio, text_threshold, link_threshold, low_text, poly, device, optimal_num_chars=None, **kwargs):
     result = []
     estimate_num_chars = optimal_num_chars is not None
-    bboxes_list, polys_list = test_net(canvas_size, mag_ratio, detector,
+    _bboxes_list, polys_list = test_net(canvas_size, mag_ratio, detector,
                                        image, text_threshold,
                                        link_threshold, low_text, poly,
                                        device, estimate_num_chars)
@@ -93,7 +93,7 @@ def get_textbox(detector, image, canvas_size, mag_ratio, text_threshold, link_th
     for polys in polys_list:
         single_img_result = []
         for i, box in enumerate(polys):
-            poly = np.array(box).astype(np.int32).reshape((-1))
+            poly = np.array(box).astype(np.int32).reshape(-1)
             single_img_result.append(poly)
         result.append(single_img_result)
 

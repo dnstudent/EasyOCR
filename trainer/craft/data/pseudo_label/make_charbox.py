@@ -1,11 +1,10 @@
+import math
 import os
 import random
-import math
 
-import numpy as np
 import cv2
+import numpy as np
 import torch
-
 from data import imgproc
 from data.pseudo_label.watershed import exec_watershed_by_version
 
@@ -28,7 +27,7 @@ class PseudoCharBoxBuilder:
         )
         try:
             word_ratio = h / w
-        except:
+        except ZeroDivisionError:
             import ipdb
 
             ipdb.set_trace()
@@ -214,7 +213,7 @@ class PseudoCharBoxBuilder:
         word_image, M, horizontal_text_bool = self.crop_image_by_bbox(
             image, word_bbox, word
         )
-        real_word_without_space = word.replace("\s", "")
+        real_word_without_space = word.replace(r"\s", "")
         real_char_len = len(real_word_without_space)
 
         scale = 128.0 / word_image.shape[0]

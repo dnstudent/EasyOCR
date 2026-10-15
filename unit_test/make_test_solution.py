@@ -1,14 +1,15 @@
-import os
 import argparse
 import lzma
+import os
 import pickle
 from datetime import datetime
+
 import numpy as np
 import PIL.Image
-
 import torch
 
 import easyocr
+
 
 # %%
 def count_parameters(model):
@@ -65,8 +66,8 @@ def main(args):
         }
 
     
-    if any([file not in os.listdir(data_dir) for file in image_preprocess.keys()]):
-        raise FileNotFoundError("Cannot find {} in {}.").format(', '.join([file for file in image_preprocess.keys() if file not in os.listdir(data_dir)], data_dir))
+    if any(file not in os.listdir(data_dir) for file in image_preprocess):
+        raise FileNotFoundError("Cannot find {} in {}.").format(', '.join([file for file in image_preprocess if file not in os.listdir(data_dir)], data_dir))
     
     easyocr_config = {"main_language": 'en'}
     

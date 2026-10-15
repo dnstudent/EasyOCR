@@ -1,12 +1,13 @@
-import os
-import sys
 import importlib
-import pickle
 import lzma
-import PIL.Image
-import numpy as np
+import os
+import pickle
+import sys
 
+import numpy as np
+import PIL.Image
 import torch
+
 
 # %%
 class Attributes:
@@ -33,15 +34,15 @@ class UnitTest:
         
         self.easyocr = easyocr
         if not hasattr(self.easyocr, 'utils'):
-            setattr(self.easyocr, 'utils', importlib.import_module('easyocr.utils'))
+            self.easyocr.utils = importlib.import_module('easyocr.utils')
         if not hasattr(self.easyocr, 'detection'):
-            setattr(self.easyocr, 'detection', importlib.import_module('easyocr.detection'))
+            self.easyocr.detection = importlib.import_module('easyocr.detection')
         if not hasattr(self.easyocr, 'recognition'):
-            setattr(self.easyocr, 'recognition', importlib.import_module('easyocr.recognition'))
+            self.easyocr.recognition = importlib.import_module('easyocr.recognition')
         
         self.easyocr_dir = os.path.dirname(easyocr.__file__)
         
-        print("Unit test is set for EasyOCR at {}".format(os.path.abspath(self.easyocr_dir)))
+        print(f"Unit test is set for EasyOCR at {os.path.abspath(self.easyocr_dir)}")
         
         self.image_data_dir = image_data_dir
         
@@ -57,8 +58,8 @@ class UnitTest:
             solution_book = pickle.load(fid)
         self.test_book = solution_book['tests']
 
-        if any([file not in os.listdir(self.image_data_dir) for file in solution_book['inputs']['images'].keys()]):
-            raise FileNotFoundError("Cannot find {} in {}.").format(', '.join([file for file in solution_book['inputs']['images'].keys() 
+        if any(file not in os.listdir(self.image_data_dir) for file in solution_book['inputs']['images']):
+            raise FileNotFoundError("Cannot find {} in {}.").format(', '.join([file for file in solution_book['inputs']['images'] 
                                                                                if file not in os.listdir(self.image_data_dir)], self.image_data_dir))
         images = {os.path.splitext(file)[0]: {
                         key: np.asarray(PIL.Image.open(os.path.join(self.image_data_dir, file)).crop(crop_box))[:,:,::-1] for (key,crop_box) in page.items() 
@@ -72,8 +73,8 @@ class UnitTest:
                                   'small_gray': english_small_gray,
                                   })
 
-        setattr(self.inputs, 'images', self.dict2attr(images))
-        setattr(self.inputs, 'easyocr_config', self.dict2attr(solution_book['inputs']['easyocr_config']))
+        self.inputs.images = self.dict2attr(images)
+        self.inputs.easyocr_config = self.dict2attr(solution_book['inputs']['easyocr_config'])
     
     def dict2attr(self, dict_):
         attr = Attributes()
@@ -108,41 +109,37 @@ class UnitTest:
     
     def set_easyocr(self):
         ocr = self.easyocr.Reader([self.inputs.easyocr_config.main_language])
-        setattr(self.easyocr, 'ocr', ocr)
+        self.easyocr.ocr = ocr
    
     
     def validate(self, test, solution, dtype):
         if dtype == str:
             return test == solution
-        elif np.issubdtype(dtype, np.integer):
-            return abs(1-test/solution) < self.numeric_acceptance_error
-        elif np.issubdtype(dtype, np.inexact):
+        elif np.issubdtype(dtype, np.integer) or np.issubdtype(dtype, np.inexact):
             return abs(1-test/solution) < self.numeric_acceptance_error
         elif dtype == dict:
             return self.are_dicts_equal(test, solution)
         elif dtype == list or dtype == tuple:
             return self.are_lists_equal(test, solution)
-        elif dtype == np.ndarray:
-            return (abs(1-test/solution) < self.numeric_acceptance_error).all()
-        elif dtype == torch.Tensor:
+        elif dtype == np.ndarray or dtype == torch.Tensor:
             return (abs(1-test/solution) < self.numeric_acceptance_error).all()
         else:
-            raise TypeError("Unsupport data type ({}) to validate. Supporting types are str, int, float, dict, list, np.ndarray, or torch.Tensor".format(dtype))
+            raise TypeError(f"Unsupport data type ({dtype}) to validate. Supporting types are str, int, float, dict, list, np.ndarray, or torch.Tensor")
     
     def are_dicts_equal(self, test, solution):
         if test.keys() == solution.keys():
-            return all([self.validate(test[key], solution[key], type(solution[key])) for key in solution.keys()])
+            return all(self.validate(test[key], solution[key], type(solution[key])) for key in solution)
         else:
             return False
     
     def are_lists_equal(self, test, solution):
         if len(test) == len(solution):
-            return all([self.validate(tt, ss, type(ss)) for (tt,ss) in zip(test, solution)])
+            return all(self.validate(tt, ss, type(ss)) for (tt,ss) in zip(test, solution))
         else:
             return False
 
     def is_list_or_tuple(self, test):
-        return isinstance(test, list) or isinstance(test, tuple)
+        return isinstance(test, (list, tuple))
 
     #Should check length of results/solutions/dtypes 
     def validate_all(self, results, solutions, dtypes):
@@ -167,7 +164,7 @@ class UnitTest:
                 ):
                 validation.append(self.validate_all(results, solutions, type(solution)))
             else:
-                raise
+                raise Exception("No exception to re-raise")
         return all(validation)
 
     def do_test(self, verbose = None):
@@ -176,13 +173,13 @@ class UnitTest:
         
         num_module_to_test = len(self.test_book)
         num_module_pass = 0
-        print("Testing EasyOCR: {:d} modules will be tested.\n".format(num_module_to_test))
+        print(f"Testing EasyOCR: {num_module_to_test:d} modules will be tested.\n")
         for name,tests in self.test_book.items():
             num_test = len(tests)
             num_passed = 0
             min_pass = sum([test['severity'] == 'Error' for test in tests.values()])
             if self.verbose > 0:
-                print("##Testing module {}: {:d} tests will be performed.".format(name, num_test))
+                print(f"##Testing module {name}: {num_test:d} tests will be performed.")
             for test_id, test in tests.items():
                 if self.verbose > 1:
                     print("#### {}: {}".format(test_id, test['description']))
@@ -201,17 +198,17 @@ class UnitTest:
                 results = test_method(*test['input'])
                 if verbose > 2:
                     print("###### Expected output: {}".format(test['output']))
-                    print("###### Received output: {}".format(results))
+                    print(f"###### Received output: {results}")
                 test_result = self.validate(results, test['output'], type(test['output']))
                 if test_result:
                     num_passed += 1
                     if self.verbose > 1:
-                        print("#### Passed. [{:d}/{:d}]".format(num_passed, num_test))
+                        print(f"#### Passed. [{num_passed:d}/{num_test:d}]")
                 else:
                     if test['severity'] == "Warning": 
                         num_passed += 1
                         if self.verbose > 1:
-                            print("#### Passed. [{:d}/{:d}]".format(num_passed, num_test))
+                            print(f"#### Passed. [{num_passed:d}/{num_test:d}]")
                         if self.verbose > 2:
                             print("##### Warning: While the result is considered as passed, the test yields results ({}) \
                               that are different from the expected values ({}). It is strongly recommended to make sure \
@@ -225,9 +222,9 @@ class UnitTest:
             if num_passed >= min_pass:
                 num_module_pass += 1
                 if self.verbose > 0: 
-                    print("##Module {}: Passed.\n".format(name))
+                    print(f"##Module {name}: Passed.\n")
             else:
-                print("##Module {}: Failed.\n".format(name))
+                print(f"##Module {name}: Failed.\n")
         
         print("#"*50)
         if num_module_pass >= num_module_to_test:

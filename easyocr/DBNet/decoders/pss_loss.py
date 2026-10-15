@@ -1,6 +1,7 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
+
 
 class PSS_Loss(nn.Module):
 
@@ -55,7 +56,7 @@ class PSS_Loss(nn.Module):
         return loss
 
     def wbce_orig_loss(self, pred, gt, m):
-        n, h, w = pred.size()
+        _n, _h, w = pred.size()
         assert (torch.max(gt) == 1)
         pos_neg_p = pred[m.byte()]
         pos_neg_t = gt[m.byte()]

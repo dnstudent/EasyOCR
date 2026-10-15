@@ -1,10 +1,10 @@
 import sys
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
-class SegDetectorLossBuilder():
+class SegDetectorLossBuilder:
     '''
     Build loss functions for SegDetector.
     Details about the built functions:
@@ -47,7 +47,7 @@ class DiceLoss(nn.Module):
 
     def forward(self, pred, batch):
         loss = self.loss(pred['binary'], batch['gt'], batch['mask'])
-        return loss, dict(dice_loss=loss)
+        return loss, {'dice_loss': loss}
 
 
 class BalanceBCELoss(nn.Module):
@@ -63,7 +63,7 @@ class BalanceBCELoss(nn.Module):
 
     def forward(self, pred, batch):
         loss = self.loss(pred['binary'], batch['gt'], batch['mask'])
-        return loss, dict(dice_loss=loss)
+        return loss, {'dice_loss': loss}
 
 
 class AdaptiveDiceLoss(nn.Module):
@@ -90,7 +90,7 @@ class AdaptiveDiceLoss(nn.Module):
         main_loss = self.main_loss(binary, gt, mask)
         thresh_loss = self.thresh_loss(thresh_binary, gt, mask)
         loss = main_loss + thresh_loss
-        return loss, dict(main_loss=main_loss, thresh_loss=thresh_loss)
+        return loss, {'main_loss': main_loss, 'thresh_loss': thresh_loss}
 
 
 class AdaptiveInstanceDiceLoss(nn.Module):
@@ -100,16 +100,16 @@ class AdaptiveInstanceDiceLoss(nn.Module):
 
     def __init__(self, iou_thresh=0.2, thresh=0.3):
         super().__init__()
-        from .dice_loss import InstanceDiceLoss, DiceLoss
+        from .dice_loss import DiceLoss, InstanceDiceLoss
         self.main_loss = DiceLoss()
         self.main_instance_loss = InstanceDiceLoss()
         self.thresh_loss = DiceLoss()
         self.thresh_instance_loss = InstanceDiceLoss()
-        self.weights = nn.ParameterDict(dict(
-            main=nn.Parameter(torch.ones(1)),
-            thresh=nn.Parameter(torch.ones(1)),
-            main_instance=nn.Parameter(torch.ones(1)),
-            thresh_instance=nn.Parameter(torch.ones(1))))
+        self.weights = nn.ParameterDict({
+            'main': nn.Parameter(torch.ones(1)),
+            'thresh': nn.Parameter(torch.ones(1)),
+            'main_instance': nn.Parameter(torch.ones(1)),
+            'thresh_instance': nn.Parameter(torch.ones(1))})
 
     def partial_loss(self, weight, loss):
         return loss / weight + torch.log(torch.sqrt(weight))
@@ -125,11 +125,11 @@ class AdaptiveInstanceDiceLoss(nn.Module):
                + self.partial_loss(self.weights['thresh'], thresh_loss) \
                + self.partial_loss(self.weights['main_instance'], main_instance_loss) \
                + self.partial_loss(self.weights['thresh_instance'], thresh_instance_loss)
-        metrics = dict(
-            main_loss=main_loss,
-            thresh_loss=thresh_loss,
-            main_instance_loss=main_instance_loss,
-            thresh_instance_loss=thresh_instance_loss)
+        metrics = {
+            'main_loss': main_loss,
+            'thresh_loss': thresh_loss,
+            'main_instance_loss': main_instance_loss,
+            'thresh_instance_loss': thresh_instance_loss}
         metrics.update(self.weights)
         return loss, metrics
 
@@ -180,9 +180,9 @@ class L1BalanceCELoss(nn.Module):
 
     def __init__(self, eps=1e-6, l1_scale=10, bce_scale=5):
         super().__init__()
+        from .balance_cross_entropy_loss import BalanceCrossEntropyLoss
         from .dice_loss import DiceLoss
         from .l1_loss import MaskL1Loss
-        from .balance_cross_entropy_loss import BalanceCrossEntropyLoss
         self.dice_loss = DiceLoss(eps=eps)
         self.l1_loss = MaskL1Loss()
         self.bce_loss = BalanceCrossEntropyLoss()
@@ -192,7 +192,7 @@ class L1BalanceCELoss(nn.Module):
 
     def forward(self, pred, batch):
         bce_loss = self.bce_loss(pred['binary'], batch['gt'], batch['mask'])
-        metrics = dict(bce_loss=bce_loss)
+        metrics = {'bce_loss': bce_loss}
         if 'thresh' in pred:
             l1_loss, l1_metric = self.l1_loss(pred['thresh'], batch['thresh_map'], batch['thresh_mask'])
             dice_loss = self.dice_loss(pred['thresh_binary'], batch['gt'], batch['mask'])
@@ -212,9 +212,9 @@ class L1BCEMiningLoss(nn.Module):
 
     def __init__(self, eps=1e-6, l1_scale=10, bce_scale=5):
         super().__init__()
+        from .balance_cross_entropy_loss import BalanceCrossEntropyLoss
         from .dice_loss import DiceLoss
         from .l1_loss import MaskL1Loss
-        from .balance_cross_entropy_loss import BalanceCrossEntropyLoss
         self.dice_loss = DiceLoss(eps=eps)
         self.l1_loss = MaskL1Loss()
         self.bce_loss = BalanceCrossEntropyLoss()
@@ -230,7 +230,7 @@ class L1BCEMiningLoss(nn.Module):
         dice_loss = self.dice_loss(
             pred['thresh_binary'], batch['gt'],
             batch['mask'], weights=bce_map + 1)
-        metrics = dict(bce_loss=bce_loss)
+        metrics = {'bce_loss': bce_loss}
         metrics['thresh_loss'] = dice_loss
         loss = dice_loss + self.l1_scale * l1_loss + bce_loss * self.bce_scale
         metrics.update(**l1_metric)

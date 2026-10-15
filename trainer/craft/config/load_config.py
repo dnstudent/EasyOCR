@@ -1,6 +1,7 @@
 import os
-import yaml
 from functools import reduce
+
+import yaml
 
 CONFIG_PATH = os.path.dirname(__file__)
 
@@ -15,7 +16,7 @@ class DotDict(dict):
     def __getattr__(self, k):
         try:
             v = self[k]
-        except:
+        except KeyError:
             return super().__getattr__(k)
         if isinstance(v, dict):
             return DotDict(v)

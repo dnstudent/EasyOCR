@@ -5,10 +5,10 @@ MIT License
 
 # -*- coding: utf-8 -*-
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from model.vgg16_bn import init_weights, vgg16_bn
+from torch import nn
 
-from model.vgg16_bn import vgg16_bn, init_weights
 
 class double_conv(nn.Module):
     def __init__(self, in_ch, mid_ch, out_ch):

@@ -1,6 +1,8 @@
-import torch
-import torch.nn as nn
 import math
+
+import torch
+from torch import nn
+
 BatchNorm2d = nn.BatchNorm2d
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
@@ -212,9 +214,8 @@ class ResNet(nn.Module):
                 m.bias.data.zero_()
         if self.dcn is not None:
             for m in self.modules():
-                if isinstance(m, Bottleneck) or isinstance(m, BasicBlock):
-                    if hasattr(m, 'conv2_offset'):
-                        constant_init(m.conv2_offset, 0)
+                if isinstance(m, (Bottleneck, BasicBlock)) and hasattr(m, 'conv2_offset'):
+                    constant_init(m.conv2_offset, 0)
 
     def _make_layer(self, block, planes, blocks, stride=1, dcn=None):
         downsample = None
@@ -265,9 +266,9 @@ def deformable_resnet18(pretrained=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = ResNet(BasicBlock, [2, 2, 2, 2],
-                    dcn=dict(modulated=True,
-                            deformable_groups=1,
-                            fallback_on_stride=False),
+                    dcn={'modulated': True,
+                            'deformable_groups': 1,
+                            'fallback_on_stride': False},
                     stage_with_dcn=[False, True, True, True], **kwargs)
     if pretrained:
         model.load_state_dict(torch.hub.load_state_dict_from_url(
@@ -305,9 +306,9 @@ def deformable_resnet50(pretrained=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = ResNet(Bottleneck, [3, 4, 6, 3],
-                   dcn=dict(modulated=True,
-                            deformable_groups=1,
-                            fallback_on_stride=False),
+                   dcn={'modulated': True,
+                            'deformable_groups': 1,
+                            'fallback_on_stride': False},
                    stage_with_dcn=[False, True, True, True],
                    **kwargs)
     if pretrained:

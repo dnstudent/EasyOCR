@@ -1,10 +1,9 @@
 # https://github.com/kuan-wang/pytorch-mobilenet-v3
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
-
-__all__ = ['MobileNetV3', 'mobilenetv3']
+__all__ = ['MobileNetV3']
 
 
 def conv_bn(inp, oup, stride, conv_layer=nn.Conv2d, norm_layer=nn.BatchNorm2d, nlin_layer=nn.ReLU):

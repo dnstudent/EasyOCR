@@ -1,6 +1,7 @@
 from . import model as structure_model
 from .constructor import Configurable, State
 
+
 class Model(Configurable):
     builder = State()
     #representer = State()
@@ -17,7 +18,9 @@ class Builder(Configurable):
     model = State()
     model_args = State()
 
-    def __init__(self, cmd={}, **kwargs):
+    def __init__(self, cmd=None, **kwargs):
+        if cmd is None:
+            cmd = {}
         self.load_all(**kwargs)
         if 'backbone' in cmd:
             self.model_args['backbone'] = cmd['backbone']

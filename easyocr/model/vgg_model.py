@@ -1,5 +1,7 @@
-import torch.nn as nn
-from .modules import VGG_FeatureExtractor, BidirectionalLSTM
+from torch import nn
+
+from .modules import BidirectionalLSTM, VGG_FeatureExtractor
+
 
 class Model(nn.Module):
 

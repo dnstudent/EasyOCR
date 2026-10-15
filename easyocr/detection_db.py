@@ -5,12 +5,13 @@ Description:
 A wrapper for DBNet text detection module for EasyOCR
 '''
 import os
-import numpy as np
 
+import numpy as np
 import torch
-import torch.backends.cudnn as cudnn
+from torch.backends import cudnn
 
 from .DBNet.DBNet import DBNet
+
 
 def test_net(image, 
              detector, 
@@ -136,7 +137,7 @@ def get_detector(trained_model, backbone = 'resnet18', device='cpu', quantize=Tr
         if quantize:
             try:
                 torch.ao.quantization.quantize_dynamic(dbnet, dtype=torch.qint8, inplace=True)
-            except:
+            except (RuntimeError, ValueError):
                 pass
     else:
         dbnet.model = dbnet.model.to(device)
@@ -201,11 +202,7 @@ def get_textbox(detector,
         List of text bounding boxes in format [left, right, top, bottom].
     '''
     if torch.device(device).type != detector.device:
-        raise RuntimeError(' '.join([
-            "DBNet detector is initialized with {} device, but detection routine",
-            "is called with device = {}.",
-            "To use this detector both have to be the same."
-            ]).format(detector.device, device))
+        raise RuntimeError(f"DBNet detector is initialized with {detector.device} device, but detection routine is called with device = {device}. To use this detector both have to be the same.")
 
     _, polys_list = test_net(image, 
                              detector, 
@@ -218,6 +215,6 @@ def get_textbox(detector,
                              device = device
                              )
                 
-    result = [[np.array(box).astype(np.int32).reshape((-1)) for box in polys] for polys in polys_list]
+    result = [[np.array(box).astype(np.int32).reshape(-1) for box in polys] for polys in polys_list]
 
     return result

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 from collections import namedtuple
+
 import numpy as np
 from shapely.geometry import Polygon
+
 """
 cite from:
 PaddleOCR, github: https://github.com/PaddlePaddle/PaddleOCR
@@ -50,13 +51,11 @@ class DetectionIoUEvaluator:
 
         matchedSum = 0
 
-        Rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
+        namedtuple('Rectangle', 'xmin ymin xmax ymax')
 
         numGlobalCareGt = 0
         numGlobalCareDet = 0
 
-        arrGlobalConfidences = []
-        arrGlobalMatches = []
 
         recall = 0
         precision = 0
@@ -80,8 +79,6 @@ class DetectionIoUEvaluator:
         pairs = []
         detMatchedNums = []
 
-        arrSampleConfidences = []
-        arrSampleMatch = []
 
         evaluationLog = ""
 
@@ -96,8 +93,7 @@ class DetectionIoUEvaluator:
             try:
                 if not Polygon(points).is_valid or not Polygon(points).is_simple:
                     continue
-            except:
-                import ipdb;
+            except (RuntimeError, ValueError, TypeError):                import ipdb;
                 ipdb.set_trace()
 
             #import ipdb;ipdb.set_trace()

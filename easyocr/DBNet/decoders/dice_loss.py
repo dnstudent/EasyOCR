@@ -1,7 +1,7 @@
-import torch
-import torch.nn as nn
-import numpy as np
 import cv2
+import numpy as np
+import torch
+from torch import nn
 
 
 class DiceLoss(nn.Module):
@@ -65,7 +65,7 @@ class LeakyDiceLoss(nn.Module):
         assert excede <= 1
         excede = 1 - excede
         loss = coverage * self.coverage_scale + excede
-        return loss, dict(coverage=coverage, excede=excede)
+        return loss, {'coverage': coverage, 'excede': excede}
 
 
 class InstanceDiceLoss(DiceLoss):
@@ -78,7 +78,7 @@ class InstanceDiceLoss(DiceLoss):
     Note: This class assume that input tensors are on gpu,
         while cput computation is required to find union areas.
     '''
-    REDUCTION = ['mean', 'sum', 'none']
+    REDUCTION = ('mean', 'sum', 'none')
 
     def __init__(self, threshold=0.3, iou_thresh=0.2, reduction=None,
                  max_regions=100, eps=1e-6):
@@ -151,8 +151,7 @@ class InstanceDiceLoss(DiceLoss):
                                 pred[batch_index][0], gt[batch_index][0],
                                 mask[batch_index] * (pred_instance_map + gt_instance_map > 0).type(torch.float32))
                         instance_loss = self.replace_or_add(instance_loss, match_loss)
-                        if instance_index in mask_not_matched:
-                            mask_not_matched.remove(instance_index)
+                        mask_not_matched.discard(instance_index)
                 if instance_loss is None:
                     instance_loss = self._compute(
                             pred[batch_index][0], gt[batch_index][0],

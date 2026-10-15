@@ -1,17 +1,15 @@
+import itertools
+import math
 import os
 import re
-import itertools
+import xml.etree.ElementTree as elemTree
 
 import cv2
-import time
 import numpy as np
 import torch
-
-from utils.craft_utils import getDetBoxes, adjustResultCoordinates
 from data import imgproc
 from data.dataset import SynthTextDataSet
-import math
-import xml.etree.ElementTree as elemTree
+from utils.craft_utils import adjustResultCoordinates, getDetBoxes
 
 
 #-------------------------------------------------------------------------------------------------------------------#
@@ -177,8 +175,7 @@ def load_synthtext_gt(data_folder):
         total_img_path.append(img_path)
         try:
             wordbox = img_bbox[index].transpose((2, 1, 0))
-        except:
-            wordbox = np.expand_dims(img_bbox[index], axis=0)
+        except (RuntimeError, ValueError, TypeError):            wordbox = np.expand_dims(img_bbox[index], axis=0)
             wordbox = wordbox.transpose((0, 2, 1))
 
         words = [re.split(" \n|\n |\n| ", t.strip()) for t in img_words[index]]
@@ -269,7 +266,7 @@ def load_icdar2013_gt(dataFolder, isTraing=False):
             .replace(".txt", ".jpg")
             .replace("gt_", "")
         )
-        image = cv2.imread(img_path)
+        cv2.imread(img_path)
         lines = open(gt_path, encoding="utf-8").readlines()
         single_img_bboxes = []
         for line in lines:
@@ -328,7 +325,7 @@ def test_net(
 
     # forward pass
     with torch.no_grad():
-        y, feature = net(x)
+        y, _feature = net(x)
 
     # make score and link map
     score_text = y[0, :, :, 0].cpu().numpy().astype(np.float32)

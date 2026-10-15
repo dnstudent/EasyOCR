@@ -1,8 +1,13 @@
-import torch.nn as nn
-from modules.transformation import TPS_SpatialTransformerNetwork
-from modules.feature_extraction import VGG_FeatureExtractor, RCNN_FeatureExtractor, ResNet_FeatureExtractor
-from modules.sequence_modeling import BidirectionalLSTM
+from modules.feature_extraction import (
+    RCNN_FeatureExtractor,
+    ResNet_FeatureExtractor,
+    VGG_FeatureExtractor,
+)
 from modules.prediction import Attention
+from modules.sequence_modeling import BidirectionalLSTM
+from modules.transformation import TPS_SpatialTransformerNetwork
+from torch import nn
+
 
 class Model(nn.Module):
 
@@ -51,7 +56,7 @@ class Model(nn.Module):
 
     def forward(self, input, text, is_train=True):
         """ Transformation stage """
-        if not self.stages['Trans'] == "None":
+        if self.stages['Trans'] != "None":
             input = self.Transformation(input)
 
         """ Feature extraction stage """

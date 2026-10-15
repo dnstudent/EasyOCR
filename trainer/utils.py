@@ -1,6 +1,8 @@
-import torch
 import pickle
+
 import numpy as np
+import torch
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class AttrDict(dict):
@@ -26,7 +28,7 @@ class BeamState:
 
     def norm(self):
         "length-normalise LM score"
-        for (k, _) in self.entries.items():
+        for k in self.entries:
             labelingLen = len(self.entries[k].labeling)
             self.entries[k].prText = self.entries[k].prText ** (1.0 / (labelingLen if labelingLen else 1.0))
 
@@ -44,7 +46,7 @@ class BeamState:
             idx_list = candidate.labeling
             text = ''
             for i,l in enumerate(idx_list):
-                if l not in ignore_idx and (not (i > 0 and idx_list[i - 1] == idx_list[i])):  # removing repeated characters and blank.
+                if l not in ignore_idx and (not (i > 0 and idx_list[i - 1] == l)):  # removing repeated characters and blank.
                     text += classes[l]
 
             if j == 0: best_text = text
@@ -71,10 +73,12 @@ def addBeam(beamState, labeling):
     if labeling not in beamState.entries:
         beamState.entries[labeling] = BeamEntry()
 
-def ctcBeamSearch(mat, classes, ignore_idx, lm, beamWidth=25, dict_list = []):
+def ctcBeamSearch(mat, classes, ignore_idx, lm, beamWidth=25, dict_list = None):
     "beam search as described by the paper of Hwang et al. and the paper of Graves et al."
 
     #blankIdx = len(classes)
+    if dict_list is None:
+        dict_list = []
     blankIdx = 0
     maxT, maxC = mat.shape
 
@@ -157,7 +161,7 @@ def ctcBeamSearch(mat, classes, ignore_idx, lm, beamWidth=25, dict_list = []):
         bestLabeling = last.sort()[0] # get most probable labeling
         res = ''
         for i,l in enumerate(bestLabeling):
-            if l not in ignore_idx and (not (i > 0 and bestLabeling[i - 1] == bestLabeling[i])):  # removing repeated characters and blank.
+            if l not in ignore_idx and (not (i > 0 and bestLabeling[i - 1] == l)):  # removing repeated characters and blank.
                 res += classes[l]
     else:
         res = last.wordsearch(classes, ignore_idx, beamWidth, dict_list)
@@ -173,7 +177,11 @@ def consecutive(data, mode ='first', stepsize=1):
     elif mode == 'last': result = [l[-1] for l in group]
     return result
 
-def word_segmentation(mat, separator_idx =  {'th': [1,2],'en': [3,4]}, separator_idx_list = [1,2,3,4]):
+def word_segmentation(mat, separator_idx =  None, separator_idx_list = None):
+    if separator_idx_list is None:
+        separator_idx_list = [1, 2, 3, 4]
+    if separator_idx is None:
+        separator_idx = {'th': [1, 2], 'en': [3, 4]}
     result = []
     sep_list = []
     start_idx = 0
@@ -186,7 +194,7 @@ def word_segmentation(mat, separator_idx =  {'th': [1,2],'en': [3,4]}, separator
     sep_list = sorted(sep_list, key=lambda x: x[0])
 
     for sep in sep_list:
-        for lang in separator_idx.keys():
+        for lang in separator_idx:
             if sep[1] == separator_idx[lang][0]: # start lang
                 sep_lang = lang
                 sep_start_idx = sep[0]
@@ -204,12 +212,16 @@ def word_segmentation(mat, separator_idx =  {'th': [1,2],'en': [3,4]}, separator
         result.append( ['', [start_idx, len(mat)-1] ] )
     return result
 
-class CTCLabelConverter(object):
+class CTCLabelConverter:
     """ Convert between text-label and text-index """
 
     #def __init__(self, character, separator = []):
-    def __init__(self, character, separator_list = {}, dict_pathlist = {}):
+    def __init__(self, character, separator_list = None, dict_pathlist = None):
         # character (str): set of the possible characters.
+        if dict_pathlist is None:
+            dict_pathlist = {}
+        if separator_list is None:
+            separator_list = {}
         dict_character = list(character)
 
         #special_character = ['\xa2', '\xa3', '\xa4','\xa5']
@@ -295,7 +307,7 @@ class CTCLabelConverter(object):
             texts.append(string)
         return texts
 
-class AttnLabelConverter(object):
+class AttnLabelConverter:
     """ Convert between text-label and text-index """
 
     def __init__(self, character):
@@ -342,7 +354,7 @@ class AttnLabelConverter(object):
         return texts
 
 
-class Averager(object):
+class Averager:
     """Compute average for torch.Tensor, used for loss average."""
 
     def __init__(self):

@@ -1,6 +1,8 @@
 
 import argparse
-from unit_test import UnitTest 
+
+from unit_test import UnitTest
+
 
 # %%
 def main(args):

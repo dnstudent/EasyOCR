@@ -1,7 +1,7 @@
 import math
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.nn.modules.utils import _pair
 
 from ..functions.deform_conv import deform_conv, modulated_deform_conv
@@ -23,11 +23,9 @@ class DeformConv(nn.Module):
 
         assert not bias
         assert in_channels % groups == 0, \
-            'in_channels {} cannot be divisible by groups {}'.format(
-                in_channels, groups)
+            f'in_channels {in_channels} cannot be divisible by groups {groups}'
         assert out_channels % groups == 0, \
-            'out_channels {} cannot be divisible by groups {}'.format(
-                out_channels, groups)
+            f'out_channels {out_channels} cannot be divisible by groups {groups}'
 
         self.in_channels = in_channels
         self.out_channels = out_channels

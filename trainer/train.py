@@ -1,19 +1,17 @@
-import os
+import random
 import sys
 import time
-import random
-import torch
-import torch.backends.cudnn as cudnn
-import torch.nn as nn
-import torch.nn.init as init
-import torch.optim as optim
-import torch.utils.data
-import numpy as np
 
-from utils import CTCLabelConverter, AttnLabelConverter, Averager
-from dataset import hierarchical_dataset, AlignCollate, Batch_Balanced_Dataset
+import numpy as np
+import torch
+import torch.utils.data
+from dataset import AlignCollate, Batch_Balanced_Dataset, hierarchical_dataset
 from model import Model
 from test import validation
+from torch import nn, optim
+from torch.nn import init
+from utils import AttnLabelConverter, Averager, CTCLabelConverter
+
 device = torch.device('cuda' if torch.cuda.is_available()
                       else 'mps' if torch.backends.mps.is_available()
                       else 'cpu')
@@ -40,21 +38,20 @@ def train(opt, show_number = 2, amp=False):
     opt.batch_ratio = opt.batch_ratio.split('-')
     train_dataset = Batch_Balanced_Dataset(opt)
 
-    log = open(f'./saved_models/{opt.experiment_name}/log_dataset.txt', 'a', encoding="utf8")
+    log = open(f'./saved_models/{opt.experiment_name}/log_dataset.txt', 'a', encoding="utf8")  # noqa: SIM115
     AlignCollate_valid = AlignCollate(imgH=opt.imgH, imgW=opt.imgW, keep_ratio_with_pad=opt.PAD, contrast_adjust=opt.contrast_adjust)
     valid_dataset, valid_dataset_log = hierarchical_dataset(root=opt.valid_data, opt=opt)
-    loader_kwargs = dict(batch_size=min(32, opt.batch_size),
-                         shuffle=True,  # 'True' to check training progress with validation function.
-                         num_workers=int(opt.workers),
-                         collate_fn=AlignCollate_valid,
-                         pin_memory=device.type == 'cuda')
+    loader_kwargs = {'batch_size': min(32, opt.batch_size),
+                         'shuffle': True,  # 'True' to check training progress with validation function.
+                         'num_workers': int(opt.workers),
+                         'collate_fn': AlignCollate_valid,
+                         'pin_memory': device.type == 'cuda'}
     if loader_kwargs['num_workers'] > 0:
         loader_kwargs['prefetch_factor'] = 512
     valid_loader = torch.utils.data.DataLoader(valid_dataset, **loader_kwargs)
     log.write(valid_dataset_log)
     print('-' * 80)
     log.write('-' * 80 + '\n')
-    log.close()
     
     """ model configuration """
     if 'CTC' in opt.Prediction:
@@ -100,7 +97,7 @@ def train(opt, show_number = 2, amp=False):
                     init.constant_(param, 0.0)
                 elif 'weight' in name:
                     init.kaiming_normal_(param)
-            except Exception as e:  # for batchnorm.
+            except (RuntimeError, ValueError, TypeError):  # for batchnorm.
                 if 'weight' in name:
                     param.data.fill_(1)
                 continue
@@ -127,8 +124,7 @@ def train(opt, show_number = 2, amp=False):
         if opt.freeze_SequenceModeling:
             for param in model.module.SequenceModeling.parameters():
                 param.requires_grad = False
-    except:
-        pass
+    except (RuntimeError, ValueError, TypeError):        pass
     
     # filter that only require gradient decent
     filtered_parameters = []
@@ -154,7 +150,7 @@ def train(opt, show_number = 2, amp=False):
         opt_log = '------------ Options -------------\n'
         args = vars(opt)
         for k, v in args.items():
-            opt_log += f'{str(k)}: {str(v)}\n'
+            opt_log += f'{k!s}: {v!s}\n'
         opt_log += '---------------------------------------\n'
         print(opt_log)
         opt_file.write(opt_log)
@@ -165,8 +161,7 @@ def train(opt, show_number = 2, amp=False):
         try:
             start_iter = int(opt.saved_model.split('_')[-1].split('.')[0])
             print(f'continue to train, start_iter: {start_iter}')
-        except:
-            pass
+        except (RuntimeError, ValueError, TypeError):            pass
 
     start_time = time.time()
     best_accuracy = -1
@@ -236,7 +231,7 @@ def train(opt, show_number = 2, amp=False):
                 model.eval()
                 with torch.no_grad():
                     valid_loss, current_accuracy, current_norm_ED, preds, confidence_score, labels,\
-                    infer_time, length_of_data = validation(model, criterion, valid_loader, converter, opt, device)
+                    _infer_time, _length_of_data = validation(model, criterion, valid_loader, converter, opt, device)
                 model.train()
 
                 # training loss and validation loss
@@ -271,7 +266,7 @@ def train(opt, show_number = 2, amp=False):
                         gt = gt[:gt.find('[s]')]
                         pred = pred[:pred.find('[s]')]
 
-                    predicted_result_log += f'{gt:25s} | {pred:25s} | {confidence:0.4f}\t{str(pred == gt)}\n'
+                    predicted_result_log += f'{gt:25s} | {pred:25s} | {confidence:0.4f}\t{pred == gt!s}\n'
                 predicted_result_log += f'{dashed_line}'
                 print(predicted_result_log)
                 log.write(predicted_result_log + '\n')

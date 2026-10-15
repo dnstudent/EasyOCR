@@ -1,6 +1,5 @@
-import numpy as np
 import cv2
-
+import numpy as np
 from data.boxEnlarge import enlargebox
 
 
@@ -124,12 +123,10 @@ class GaussianBuilder:
                 bbox_top : bbox_top + height, bbox_left : bbox_left + width,
             ] = high_value_score
 
-        except Exception as e:
-            print("Error : {}".format(e))
+        except (ValueError, IndexError) as e:
+            print(f"Error : {e}")
             print(
-                "On generating {} map, strange box came out. (width: {}, height: {})".format(
-                    map_type, width, height
-                )
+                f"On generating {map_type} map, strange box came out. (width: {width}, height: {height})"
             )
 
         return score_map

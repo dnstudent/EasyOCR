@@ -4,9 +4,8 @@ MIT License
 """
 
 # -*- coding: utf-8 -*-
-import numpy as np
-
 import cv2
+import numpy as np
 from skimage import io
 
 
@@ -58,8 +57,7 @@ def resize_aspect_ratio(img, square_size, interpolation, mag_ratio=1):
     target_size = mag_ratio * max(height, width)
 
     # set original image size
-    if target_size > square_size:
-        target_size = square_size
+    target_size = min(target_size, square_size)
 
     ratio = target_size / max(height, width)
 

@@ -1,6 +1,7 @@
 import importlib
 from collections import OrderedDict
 
+
 class State:
     def __init__(self, autoload=True, default=None):
         self.autoload = autoload
@@ -16,7 +17,7 @@ class StateMeta(type):
 
         current_states.sort(key=lambda x: x[0])
         attrs['states'] = OrderedDict(current_states)
-        new_class = super(StateMeta, mcs).__new__(mcs, name, bases, attrs)
+        new_class = super().__new__(mcs, name, bases, attrs)
 
         # Walk through the MRO
         states = OrderedDict()
@@ -32,7 +33,9 @@ class StateMeta(type):
 
 
 class Configurable(metaclass=StateMeta):
-    def __init__(self, *args, cmd={}, **kwargs):
+    def __init__(self, *args, cmd=None, **kwargs):
+        if cmd is None:
+            cmd = {}
         self.load_all(cmd=cmd, **kwargs)
 
     @staticmethod
@@ -56,7 +59,7 @@ class Configurable(metaclass=StateMeta):
     def load(self, state_name, **kwargs):
         # FIXME: kwargs should be filtered
         # Args passed from command line
-        cmd = kwargs.pop('cmd', dict())
+        cmd = kwargs.pop('cmd', {})
         if state_name in kwargs:
             setattr(self, state_name, self.create_member_from_config(
                 (kwargs[state_name], cmd)))
@@ -81,7 +84,7 @@ class Configurable(metaclass=StateMeta):
         state = {}
         state['class'] = self.__class__.__module__ + \
             '.' + self.__class__.__name__
-        for name, value in self.states.items():
+        for name in self.states:
             obj = getattr(self, name)
             state[name] = self.dump_obj(obj)
         return state

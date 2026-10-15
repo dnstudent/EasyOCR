@@ -6,8 +6,9 @@ Description:
 - Change to Just-in-Time loading approach
 '''
 import os
-import torch
 import warnings
+
+import torch
 from torch.autograd import Function
 from torch.nn.modules.utils import _pair
 from torch.utils import cpp_extension
@@ -26,9 +27,9 @@ warnings.formatwarning = custom_formatwarning
 dcn_dir = os.path.dirname(os.path.dirname(__file__))
 try:
     from .. import deform_conv_cpu
-    warnings.warn("Using precompiled deform_conv_cpu from {}".format(deform_conv_cpu.__file__))
+    warnings.warn(f"Using precompiled deform_conv_cpu from {deform_conv_cpu.__file__}")
     dcn_cpu_ready = True
-except:
+except (ImportError, ModuleNotFoundError):
     try:
         warnings.warn("Compiling deform_conv_cpu ...")
         warnings.warn("(This may take a while if this module is loaded for the first time.)")
@@ -38,10 +39,10 @@ except:
                                      os.path.join(dcn_dir, 'src', "deform_conv_cpu_kernel.cpp")])
         warnings.warn("Done.")
         dcn_cpu_ready = True
-    except Exception as error:
+    except (OSError, RuntimeError, ImportError) as error:
         warnings.warn(' '.join([
             "Failed to import and/or compile 'deform_conv_cpu' with the following error",
-            "{}".format(error),
+            f"{error}",
             "Deformable convulution and DBNet will not be able to run on CPU."
             ]))
         dcn_cpu_ready = False
@@ -49,9 +50,9 @@ except:
 if torch.cuda.is_available():
     try:
         from .. import deform_conv_cuda
-        warnings.warn("Using precompiled deform_conv_cuda from {}".format(deform_conv_cuda.__file__))
+        warnings.warn(f"Using precompiled deform_conv_cuda from {deform_conv_cuda.__file__}")
         dcn_cuda_ready = True
-    except:
+    except (ImportError, ModuleNotFoundError):
         try:
             warnings.warn("Compiling deform_conv_cuda ...")
             warnings.warn("(This may take a while if this module is loaded for the first time.)")
@@ -65,10 +66,10 @@ if torch.cuda.is_available():
                                          os.path.join(dcn_dir, 'src', "deform_conv_cuda_kernel.cu")])
             warnings.warn("Done.")
             dcn_cuda_ready = True
-        except Exception as error:
+        except (OSError, RuntimeError, ImportError) as error:
             warnings.warn(' '.join([
                 "Failed to import or compile 'deform_conv_cuda' with the following error",
-                "{}".format(error),
+                f"{error}",
                 "Deformable convulution and DBNet will not be able to run on GPU."
                 ]))
             dcn_cuda_ready = False
@@ -88,8 +89,7 @@ class DeformConvFunction(Function):
                 im2col_step=64):
         if input is not None and input.dim() != 4:
             raise ValueError(
-                "Expected 4D tensor as input, got {}D tensor instead.".format(
-                    input.dim()))
+                f"Expected 4D tensor as input, got {input.dim()}D tensor instead.")
         ctx.stride = _pair(stride)
         ctx.padding = _pair(padding)
         ctx.dilation = _pair(dilation)
@@ -125,7 +125,7 @@ class DeformConvFunction(Function):
         else:
             device_ = input.device.type
             raise RuntimeError(
-                "Input type is {}, but 'deform_conv_{}.*.so' is not imported successfully.".format(device_, device_),
+                f"Input type is {device_}, but 'deform_conv_{device_}.*.so' is not imported successfully.",
                 )
              
         return output
@@ -177,7 +177,7 @@ class DeformConvFunction(Function):
             kernel = dilation[d] * (weight.size(d + 2) - 1) + 1
             stride_ = stride[d]
             output_size += ((in_size + (2 * pad) - kernel) // stride_ + 1, )
-        if not all(map(lambda s: s > 0, output_size)):
+        if not all(s > 0 for s in output_size):
             raise ValueError(
                 "convolution input is too small (output would be {})".format(
                     'x'.join(map(str, output_size))))
@@ -228,7 +228,7 @@ class ModulatedDeformConvFunction(Function):
         else:
             device_ = input.device.type
             raise RuntimeError(
-                "Input type is {}, but 'deform_conv_{}.*.so' is not imported successfully.".format(device_, device_),
+                f"Input type is {device_}, but 'deform_conv_{device_}.*.so' is not imported successfully.",
                 )
         return output
 

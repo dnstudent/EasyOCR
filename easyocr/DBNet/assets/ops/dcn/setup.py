@@ -1,8 +1,6 @@
 import torch
 from setuptools import setup
-from torch.utils.cpp_extension import BuildExtension
-from torch.utils.cpp_extension import CppExtension
-from torch.utils.cpp_extension import CUDAExtension
+from torch.utils.cpp_extension import BuildExtension, CppExtension, CUDAExtension
 
 modules = [
         CppExtension('deform_conv_cpu', [

@@ -1,25 +1,33 @@
 
-from .recognition import get_recognizer, get_text
-from .utils import group_text_box, get_image_list, calculate_md5, get_paragraph,\
-                   download_and_unzip, printProgressBar, diff, reformat_input,\
-                   make_rotated_img_list, set_result_with_confidence,\
-                   reformat_input_batched, merge_to_free
-from .config import *
-from bidi import get_display
-import numpy as np
-import cv2
-import torch
+import json
 import os
 import sys
-from pathlib import Path
-from PIL import Image
 from logging import getLogger
+from pathlib import Path
+
+import torch
 import yaml
-import json
+from bidi import get_display
+
+from .config import *
+from .recognition import get_recognizer, get_text
+from .utils import (
+    calculate_md5,
+    diff,
+    download_and_unzip,
+    get_image_list,
+    get_paragraph,
+    group_text_box,
+    make_rotated_img_list,
+    merge_to_free,
+    reformat_input,
+    reformat_input_batched,
+    set_result_with_confidence,
+)
 
 LOGGER = getLogger(__name__)
 
-class Reader(object):
+class Reader:
 
     def __init__(self, lang_list, gpu=True, model_storage_directory=None,
                  user_network_directory=None, detect_network="craft", 
@@ -164,7 +172,7 @@ class Reader(object):
             if recognizer:
                 if os.path.isfile(model_path) == False:
                     if not self.download_enabled:
-                        raise FileNotFoundError("Missing %s and downloads disabled" % model_path)
+                        raise FileNotFoundError(f"Missing {model_path} and downloads disabled")
                     LOGGER.warning('Downloading recognition model, please wait. '
                                    'This may take several minutes depending upon your network connection.')
                     download_and_unzip(model['url'], model['filename'], self.model_storage_directory, verbose)
@@ -172,7 +180,7 @@ class Reader(object):
                     LOGGER.info('Download complete.')
                 elif calculate_md5(model_path) != model['md5sum']:
                     if not self.download_enabled:
-                        raise FileNotFoundError("MD5 mismatch for %s and downloads disabled" % model_path)
+                        raise FileNotFoundError(f"MD5 mismatch for {model_path} and downloads disabled")
                     LOGGER.warning(corrupt_msg)
                     os.remove(model_path)
                     LOGGER.warning('Re-downloading the recognition model, please wait. '
@@ -239,7 +247,7 @@ class Reader(object):
             detector_path = os.path.join(self.model_storage_directory, self.detection_models[self.detect_network]['filename'])
             if os.path.isfile(detector_path) == False:
                 if not self.download_enabled:
-                    raise FileNotFoundError("Missing %s and downloads disabled" % detector_path)
+                    raise FileNotFoundError(f"Missing {detector_path} and downloads disabled")
                 LOGGER.warning('Downloading detection model, please wait. '
                                'This may take several minutes depending upon your network connection.')
                 download_and_unzip(self.detection_models[self.detect_network]['url'], self.detection_models[self.detect_network]['filename'], self.model_storage_directory, self.verbose)
@@ -247,7 +255,7 @@ class Reader(object):
                 LOGGER.info('Download complete')
             elif calculate_md5(detector_path) != self.detection_models[self.detect_network]['md5sum']:
                 if not self.download_enabled:
-                    raise FileNotFoundError("MD5 mismatch for %s and downloads disabled" % detector_path)
+                    raise FileNotFoundError(f"MD5 mismatch for {detector_path} and downloads disabled")
                 LOGGER.warning(corrupt_msg)
                 os.remove(detector_path)
                 LOGGER.warning('Re-downloading the detection model, please wait. '
@@ -308,7 +316,7 @@ class Reader(object):
                ):
 
         if reformat:
-            img, img_cv_grey = reformat_input(img)
+            img, _img_cv_grey = reformat_input(img)
 
         text_box_list = self.get_textbox(self.detector, 
                                     img, 
@@ -350,7 +358,7 @@ class Reader(object):
                   y_ths = 0.5, x_ths = 1.0, reformat=True, output_format='standard', sort_output = False):
 
         if reformat:
-            img, img_cv_grey = reformat_input(img_cv_grey)
+            _img, img_cv_grey = reformat_input(img_cv_grey)
 
         if allowlist:
             ignore_char = ''.join(set(self.character)-set(allowlist))
@@ -524,9 +532,8 @@ class Reader(object):
                     chartrs = str(myfile.read().splitlines()).replace('\n','') 
                     for i in range(len(char)):
                         res = search(chartrs,char[i])
-                        if res != -1:
-                            if filename[0:2]=="en" or filename[0:2]=="ch":
-                                print(tupleadd(i))
+                        if res != -1 and (filename[0:2] == "en" or filename[0:2] == "ch"):
+                            print(tupleadd(i))
 
     def readtext_batched(self, image, n_width=None, n_height=None,\
                          decoder = 'greedy', beamWidth= 5, batch_size = 1,\

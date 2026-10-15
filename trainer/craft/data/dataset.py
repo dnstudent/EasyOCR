@@ -1,28 +1,27 @@
-import os
-import re
 import itertools
+import os
 import random
+import re
 
+import cv2
 import numpy as np
 import scipy.io as scio
-from PIL import Image
-import cv2
-from torch.utils.data import Dataset
-import torchvision.transforms as transforms
-
 from data import imgproc
 from data.gaussian import GaussianBuilder
 from data.imgaug import (
-    rescale,
-    random_resize_crop_synth,
-    random_resize_crop,
+    random_crop,
     random_horizontal_flip,
+    random_resize_crop,
+    random_resize_crop_synth,
     random_rotate,
     random_scale,
-    random_crop,
+    rescale,
 )
 from data.pseudo_label.make_charbox import PseudoCharBoxBuilder
-from utils.util import saveInput, saveImage
+from PIL import Image
+from torch.utils.data import Dataset
+from torchvision import transforms
+from utils.util import saveImage, saveInput
 
 
 class CraftBaseDataset(Dataset):
@@ -55,7 +54,7 @@ class CraftBaseDataset(Dataset):
         self.sample = sample
         if self.sample != -1:
             random.seed(0)
-            self.idx = random.sample(range(0, len(self.img_names)), self.sample)
+            self.idx = random.sample(range(len(self.img_names)), self.sample)
 
         self.pre_crop_area = []
 
@@ -75,11 +74,7 @@ class CraftBaseDataset(Dataset):
             )
 
         if self.aug.random_crop.option:
-            if self.aug.random_crop.version == "random_crop_with_bbox":
-                augment_targets = random_crop_with_bbox(
-                    augment_targets, word_level_char_bbox, self.output_size
-                )
-            elif self.aug.random_crop.version == "random_resize_crop_synth":
+            if self.aug.random_crop.version == "random_resize_crop_synth":
                 augment_targets = random_resize_crop_synth(
                     augment_targets, self.output_size
                 )
@@ -103,7 +98,7 @@ class CraftBaseDataset(Dataset):
                 augment_targets = random_crop(augment_targets, self.output_size,)
 
             else:
-                assert "Undefined RandomCrop version"
+                assert False, "Undefined RandomCrop version"
 
         if self.aug.random_horizontal_flip.option:
             augment_targets = random_horizontal_flip(augment_targets)
@@ -146,7 +141,7 @@ class CraftBaseDataset(Dataset):
                 confidence_mask,
                 word_level_char_bbox,
                 all_affinity_bbox,
-                words,
+                _words,
             ) = self.make_gt_score(index)
         else:
             (
@@ -155,7 +150,7 @@ class CraftBaseDataset(Dataset):
                 affinity_score,
                 confidence_mask,
                 word_level_char_bbox,
-                words,
+                _words,
             ) = self.load_saved_gt_score(index)
             all_affinity_bbox = []
 
@@ -368,7 +363,8 @@ class CustomDataset(CraftBaseDataset):
         self.gpu = gpu
 
     def load_img_gt_box(self, img_gt_box_path):
-        lines = open(img_gt_box_path, encoding="utf-8").readlines()
+        with open(img_gt_box_path, encoding="utf-8") as f:
+            lines = f.readlines()
         word_bboxes = []
         words = []
         for line in lines:
@@ -392,7 +388,7 @@ class CustomDataset(CraftBaseDataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         img_gt_box_path = os.path.join(
-            self.img_gt_box_dir, "gt_%s.txt" % os.path.splitext(img_name)[0]
+            self.img_gt_box_dir, f"gt_{os.path.splitext(img_name)[0]}.txt"
         )
         word_bboxes, words = self.load_img_gt_box(
             img_gt_box_path
@@ -495,7 +491,7 @@ class CustomDataset(CraftBaseDataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         img_gt_box_path = os.path.join(
-            self.img_gt_box_dir, "gt_%s.txt" % os.path.splitext(img_name)[0]
+            self.img_gt_box_dir, f"gt_{os.path.splitext(img_name)[0]}.txt"
         )
         word_bboxes, words = self.load_img_gt_box(img_gt_box_path)
         image, word_bboxes = rescale(image, word_bboxes)

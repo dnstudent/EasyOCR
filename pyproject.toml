@@ -64,8 +64,44 @@ craft = [
     "tqdm>=4.70.1",
     "wandb>=0.30.0",
 ]
+dev = [
+    "basedpyright>=1.40.2",
+    "ipykernel>=7.4.0",
+    "ruff>=0.17.1,<0.18",
+]
 trainer = [
     "natsort>=8.4.0",
     "nltk>=3.10.3",
     "pandas>=2.3.3",
 ]
+
+[tool.ruff]
+target-version = "py312"
+extend-exclude = ["dist"]
+
+[tool.basedpyright]
+include = ["easyocr", "trainer", "unit_test"]
+exclude = ["**/__pycache__", "**/*.ipynb"]
+typeCheckingMode = "standard"
+pythonVersion = "3.12"
+# Keep the Unknown/Any radar on as warnings: these measure the annotation
+# campaign. Explicit `Any` is allowed where a type is genuinely dynamic.
+reportUnknownArgumentType = "warning"
+reportUnknownParameterType = "warning"
+reportUnknownVariableType = "warning"
+reportUnknownMemberType = "warning"
+reportMissingParameterType = "warning"
+reportMissingTypeArgument = "warning"
+reportUnannotatedClassAttribute = "warning"
+reportAny = "none"
+reportExplicitAny = "none"
+
+# trainer/ stays script-only: its modules import each other script-style,
+# which only resolves when running from inside the script's own directory.
+[[tool.basedpyright.executionEnvironments]]
+root = "trainer/craft"
+reportImplicitRelativeImport = "none"
+
+[[tool.basedpyright.executionEnvironments]]
+root = "trainer"
+reportImplicitRelativeImport = "none"

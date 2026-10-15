@@ -1,5 +1,7 @@
-import torch.nn as nn
-from .modules import ResNet_FeatureExtractor, BidirectionalLSTM
+from torch import nn
+
+from .modules import BidirectionalLSTM, ResNet_FeatureExtractor
+
 
 class Model(nn.Module):
 

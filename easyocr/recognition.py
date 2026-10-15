@@ -1,13 +1,15 @@
-from PIL import Image
-import torch
-import torch.backends.cudnn as cudnn
-import torch.utils.data
-import torch.nn.functional as F
-import torchvision.transforms as transforms
-import numpy as np
 import importlib
-from .utils import CTCLabelConverter, copyStateDict
 import math
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+import torch.utils.data
+from PIL import Image
+from torchvision import transforms
+
+from .utils import CTCLabelConverter, copyStateDict
+
 
 def custom_mean(x):
     return x.prod()**(2.0/np.sqrt(len(x)))
@@ -26,7 +28,7 @@ def adjust_contrast_grey(img, target = 0.4):
         img = np.maximum(np.full(img.shape, 0) ,np.minimum(np.full(img.shape, 255), img)).astype(np.uint8)
     return img
 
-class NormalizePAD(object):
+class NormalizePAD:
 
     def __init__(self, max_size, PAD_type='right'):
         self.toTensor = transforms.ToTensor()
@@ -58,7 +60,7 @@ class ListDataset(torch.utils.data.Dataset):
         img = self.image_list[index]
         return Image.fromarray(img, 'L')
 
-class AlignCollate(object):
+class AlignCollate:
 
     def __init__(self, imgH=32, imgW=100, keep_ratio_with_pad=False, adjust_contrast = 0.):
         self.imgH = imgH
@@ -104,7 +106,7 @@ def recognizer_predict(model, converter, test_loader, batch_max_length,\
             batch_size = image_tensors.size(0)
             image = image_tensors.to(device)
             # For max length prediction
-            length_for_pred = torch.IntTensor([batch_max_length] * batch_size).to(device)
+            torch.IntTensor([batch_max_length] * batch_size).to(device)
             text_for_pred = torch.LongTensor(batch_size, batch_max_length + 1).fill_(0).to(device)
 
             preds = model(image, text_for_pred)
@@ -169,7 +171,7 @@ def get_recognizer(recog_network, network_params, character,\
         if quantize:
             try:
                 torch.ao.quantization.quantize_dynamic(model, dtype=torch.qint8, inplace=True)
-            except:
+            except (RuntimeError, ValueError):
                 pass
     else:
         model = model.to(device)
@@ -186,8 +188,10 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
     char_group_idx = {}
     ignore_idx = []
     for char in ignore_char:
-        try: ignore_idx.append(character.index(char)+1)
-        except: pass
+        try:
+            ignore_idx.append(character.index(char) + 1)
+        except ValueError:
+            pass
 
     coord = [item[0] for item in image_list]
     img_list = [item[1] for item in image_list]

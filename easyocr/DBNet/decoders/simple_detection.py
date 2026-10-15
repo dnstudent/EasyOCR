@@ -1,9 +1,7 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-
-
 from backbones.upsample_head import SimpleUpsampleHead
+from torch import nn
 
 
 class SimpleDetectionDecoder(nn.Module):

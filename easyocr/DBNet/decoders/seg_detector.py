@@ -1,12 +1,13 @@
 from collections import OrderedDict
 
 import torch
-import torch.nn as nn
+from torch import nn
+
 BatchNorm2d = nn.BatchNorm2d
 
 class SegDetector(nn.Module):
     def __init__(self,
-                 in_channels=[64, 128, 256, 512],
+                 in_channels=None,
                  inner_channels=256, k=10,
                  bias=False, adaptive=False, smooth=False, serial=False,
                  *args, **kwargs):
@@ -16,6 +17,8 @@ class SegDetector(nn.Module):
         smooth: If true, use bilinear instead of deconv.
         serial: If true, thresh prediction will combine segmentation result as input.
         '''
+        if in_channels is None:
+            in_channels = [64, 128, 256, 512]
         super().__init__()
         self.k = k
         self.serial = serial

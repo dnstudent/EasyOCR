@@ -1,8 +1,9 @@
-import torch
-import torch.nn as nn
-import torch.nn.init as init
-from torchvision import models
 from collections import namedtuple
+
+import torch
+from torch import nn
+from torch.nn import init
+from torchvision import models
 
 
 def init_weights(modules):
@@ -85,9 +86,9 @@ class BidirectionalLSTM(nn.Module):
         input : visual feature [batch_size x T x input_size]
         output : contextual feature [batch_size x T x output_size]
         """
-        try: # multi gpu needs this
+        try:  # multi gpu needs this
             self.rnn.flatten_parameters()
-        except: # quantization doesn't work with this 
+        except (RuntimeError, ValueError):  # quantization doesn't work with this
             pass
         recurrent, _ = self.rnn(input)  # batch_size x T x input_size -> batch_size x T x (2*hidden_size)
         output = self.linear(recurrent)  # batch_size x T x output_size

@@ -47,7 +47,7 @@ separator_list = {
     'en': ['\xa4', '\xa5']
 }
 separator_char = []
-for lang, sep in separator_list.items():
+for sep in separator_list.values():
     separator_char += sep
 
 recognition_models = {

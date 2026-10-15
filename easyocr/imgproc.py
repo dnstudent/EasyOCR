@@ -3,13 +3,14 @@ Copyright (c) 2019-present NAVER Corp.
 MIT License
 """
 
-import numpy as np
 import cv2
+import numpy as np
+
 
 def loadImage(img_file):
     img = cv2.imread(img_file, cv2.IMREAD_UNCHANGED)  # BGR/BGRA order
     if img is None:
-        raise IOError('cannot read image file: ' + img_file)
+        raise OSError('cannot read image file: ' + img_file)
     if img.ndim == 2:
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
     else:
@@ -44,8 +45,7 @@ def resize_aspect_ratio(img, square_size, interpolation, mag_ratio=1):
     target_size = mag_ratio * max(height, width)
 
     # set original image size
-    if target_size > square_size:
-        target_size = square_size
+    target_size = min(target_size, square_size)
     
     ratio = target_size / max(height, width)    
 

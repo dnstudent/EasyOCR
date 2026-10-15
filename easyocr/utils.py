@@ -1,154 +1,188 @@
-import torch
-import pickle
-import numpy as np
-import math
-import cv2
-from PIL import Image, JpegImagePlugin
+from __future__ import annotations
+
 import hashlib
-import sys, os
-from zipfile import ZipFile
-from urllib.request import urlretrieve
+import math
+import os
 from collections import OrderedDict
+from typing import Any
+from urllib.request import urlretrieve
+from zipfile import ZipFile
+
+import cv2
+import numpy as np
+import torch
+from numpy.typing import NDArray
+from PIL import JpegImagePlugin
+
 from .imgproc import loadImage
 
-def copyStateDict(state_dict):
+
+def copyStateDict(state_dict: dict[str, torch.Tensor]) -> OrderedDict[str, torch.Tensor]:
     """Drop the 'module.' prefix that DataParallel wrapping adds to checkpoint keys."""
-    if list(state_dict.keys())[0].startswith("module"):
+    if next(iter(state_dict.keys())).startswith("module"):
         start_idx = 1
     else:
         start_idx = 0
-    new_state_dict = OrderedDict()
+    new_state_dict: OrderedDict[str, torch.Tensor] = OrderedDict()
     for k, v in state_dict.items():
         name = ".".join(k.split(".")[start_idx:])
         new_state_dict[name] = v
     return new_state_dict
 
-def consecutive(data, mode ='first', stepsize=1):
+def consecutive(
+    data: NDArray[np.signedinteger], mode: str = "first", stepsize: int = 1
+) -> list[int]:
     """Group consecutive values in ``data`` and return either first or last indices."""
-    group = np.split(data, np.where(np.diff(data) != stepsize)[0]+1)
-    group = [item for item in group if len(item)>0]
+    group = np.split(data, np.where(np.diff(data) != stepsize)[0] + 1)
+    group = [item for item in group if len(item) > 0]
 
-    if mode == 'first': result = [l[0] for l in group]
-    elif mode == 'last': result = [l[-1] for l in group]
+    if mode == "first":
+        result = [int(l[0]) for l in group]
+    elif mode == "last":
+        result = [int(l[-1]) for l in group]
+    else:
+        raise ValueError(f"unknown mode: {mode!r} (expected 'first' or 'last')")
     return result
 
-def word_segmentation(mat, separator_idx =  {'th': [1,2],'en': [3,4]}, separator_idx_list = [1,2,3,4]):
+def word_segmentation(
+    mat: NDArray[np.signedinteger],
+    separator_idx: dict[str, list[int]] | None = None,
+    separator_idx_list: list[int] | None = None,
+) -> list[tuple[str, list[int]]]:
     """Extract word spans from a matrix of separator indices."""
-    result = []
-    sep_list = []
+    if separator_idx_list is None:
+        separator_idx_list = [1, 2, 3, 4]
+    if separator_idx is None:
+        separator_idx = {"th": [1, 2], "en": [3, 4]}
+    result: list[tuple[str, list[int]]] = []
+    sep_list: list[list[int | Any]] = []
     start_idx = 0
-    sep_lang = ''
+    sep_lang: str = ""
+    sep_start_idx: int = 0
     for sep_idx in separator_idx_list:
-        if sep_idx % 2 == 0: mode ='first'
-        else: mode ='last'
-        a = consecutive( np.argwhere(mat == sep_idx).flatten(), mode)
-        new_sep = [ [item, sep_idx] for item in a]
+        if sep_idx % 2 == 0:
+            mode = "first"
+        else:
+            mode = "last"
+        a = consecutive(np.argwhere(mat == sep_idx).flatten(), mode)
+        new_sep = [[item, sep_idx] for item in a]
         sep_list += new_sep
     sep_list = sorted(sep_list, key=lambda x: x[0])
 
     for sep in sep_list:
-        for lang in separator_idx.keys():
-            if sep[1] == separator_idx[lang][0]: # start lang
+        for lang in separator_idx:
+            if sep[1] == separator_idx[lang][0]:  # start lang
                 sep_lang = lang
                 sep_start_idx = sep[0]
-            elif sep[1] == separator_idx[lang][1]: # end lang
-                if sep_lang == lang: # check if last entry if the same start lang
-                    new_sep_pair = [lang, [sep_start_idx+1, sep[0]-1]]
+            elif sep[1] == separator_idx[lang][1]:  # end lang
+                if sep_lang == lang:  # check if last entry is the same start lang
+                    new_sep_pair: tuple[str, list[int]] = (
+                        lang,
+                        [sep_start_idx + 1, sep[0] - 1],
+                    )
                     if sep_start_idx > start_idx:
-                        result.append( ['', [start_idx, sep_start_idx-1] ] )
-                    start_idx = sep[0]+1
+                        result.append(("", [start_idx, sep_start_idx - 1]))
+                    start_idx = sep[0] + 1
                     result.append(new_sep_pair)
-                sep_lang = ''# reset
+                sep_lang = ""  # reset
 
-    if start_idx <= len(mat)-1:
-        result.append( ['', [start_idx, len(mat)-1] ] )
+    if start_idx <= len(mat) - 1:
+        result.append(("", [start_idx, len(mat) - 1]))
     return result
 
 # code is based from https://github.com/githubharald/CTCDecoder/blob/master/src/BeamSearch.py
 class BeamEntry:
-    "information about one single beam at specific time-step"
-    def __init__(self):
+    """Information about one single beam at specific time-step."""
+
+    def __init__(self) -> None:
         """Initialize probability accumulators for a single beam."""
-        self.prTotal = 0 # blank and non-blank
-        self.prNonBlank = 0 # non-blank
-        self.prBlank = 0 # blank
-        self.prText = 1 # LM score
-        self.lmApplied = False # flag if LM was already applied to this beam
-        self.labeling = () # beam-labeling
-        self.simplified = True  # To run simplyfiy label
+        self.prTotal: float = 0  # blank and non-blank
+        self.prNonBlank: float = 0  # non-blank
+        self.prBlank: float = 0  # blank
+        self.prText: float = 1  # LM score
+        self.lmApplied: bool = False  # flag if LM was already applied to this beam
+        self.labeling: tuple[int, ...] = ()  # beam-labeling
+        self.simplified: bool = True  # To run simplyfiy label
 
 class BeamState:
-    "information about the beams at specific time-step"
-    def __init__(self):
-        """Create an empty container for beam entries at a given timestep."""
-        self.entries = {}
+    """Information about the beams at specific time-step."""
 
-    def norm(self):
-        "length-normalise LM score"
-        for (k, _) in self.entries.items():
+    def __init__(self) -> None:
+        """Create an empty container for beam entries at a given timestep."""
+        self.entries: dict[int, BeamEntry] = {}
+
+    def norm(self) -> None:
+        """Length-normalise LM score."""
+        for k in self.entries:
             labelingLen = len(self.entries[k].labeling)
             self.entries[k].prText = self.entries[k].prText ** (1.0 / (labelingLen if labelingLen else 1.0))
 
-    def sort(self):
-        "return beam-labelings, sorted by probability"
-        beams = [v for (_, v) in self.entries.items()]
-        sortedBeams = sorted(beams, reverse=True, key=lambda x: x.prTotal*x.prText)
+    def sort(self) -> list[tuple[int, ...]]:
+        """Return beam-labelings, sorted by probability."""
+        beams = [v for v in self.entries.values()]
+        sortedBeams = sorted(beams, reverse=True, key=lambda x: x.prTotal * x.prText)
         return [x.labeling for x in sortedBeams]
 
-    def wordsearch(self, classes, ignore_idx, maxCandidate, dict_list):
-        beams = [v for (_, v) in self.entries.items()]
-        sortedBeams = sorted(beams, reverse=True, key=lambda x: x.prTotal*x.prText)
-        if len(sortedBeams) >  maxCandidate: sortedBeams = sortedBeams[:maxCandidate]
+    def wordsearch(
+        self, classes: list[str], ignore_idx: list[int], maxCandidate: int, dict_list: dict[str, str]
+    ) -> str:
+        beams = [v for v in self.entries.values()]
+        sortedBeams = sorted(beams, reverse=True, key=lambda x: x.prTotal * x.prText)
+        if len(sortedBeams) > maxCandidate:
+            sortedBeams = sortedBeams[:maxCandidate]
 
+        best_text: str = ""
         for j, candidate in enumerate(sortedBeams):
             idx_list = candidate.labeling
-            text = ''
-            for i,l in enumerate(idx_list):
-                if l not in ignore_idx and (not (i > 0 and idx_list[i - 1] == idx_list[i])):
+            text: str = ""
+            for i, l in enumerate(idx_list):
+                if l not in ignore_idx and (not (i > 0 and idx_list[i - 1] == l)):
                     text += classes[l]
 
-            if j == 0: best_text = text
+            if j == 0:
+                best_text = text
             if text in dict_list:
-                #print('found text: ', text)
+                # print('found text: ', text)
                 best_text = text
                 break
             else:
                 pass
-                #print('not in dict: ', text)
+                # print('not in dict: ', text)
         return best_text
 
-def applyLM(parentBeam, childBeam, classes, lm):
-    "calculate LM score of child beam by taking score from parent beam and bigram probability of last two chars"
+def applyLM(parentBeam: BeamEntry, childBeam: BeamEntry, classes: list[str], lm: Any) -> None:
+    """Calculate LM score of child beam by taking score from parent beam and bigram probability of last two chars."""
     if lm and not childBeam.lmApplied:
-        c1 = classes[parentBeam.labeling[-1] if parentBeam.labeling else classes.index(' ')] # first char
-        c2 = classes[childBeam.labeling[-1]] # second char
-        lmFactor = 0.01 # influence of language model
-        bigramProb = lm.getCharBigram(c1, c2) ** lmFactor # probability of seeing first and second char next to each other
-        childBeam.prText = parentBeam.prText * bigramProb # probability of char sequence
-        childBeam.lmApplied = True # only apply LM once per beam entry
+        c1 = classes[parentBeam.labeling[-1] if parentBeam.labeling else classes.index(' ')]  # first char
+        c2 = classes[childBeam.labeling[-1]]  # second char
+        lmFactor = 0.01  # influence of language model
+        bigramProb = lm.getCharBigram(c1, c2) ** lmFactor  # probability of seeing first and second char next to each other
+        childBeam.prText = parentBeam.prText * bigramProb  # probability of char sequence
+        childBeam.lmApplied = True  # only apply LM once per beam entry
 
-def simplify_label(labeling, blankIdx = 0):
-    labeling = np.array(labeling)
+def simplify_label(labeling: tuple[int, ...], blankIdx: int = 0) -> tuple[int, ...]:
+    labeling_arr = np.array(labeling)
 
     # collapse blank
-    idx = np.where(~((np.roll(labeling,1) == labeling) & (labeling == blankIdx)))[0]
-    labeling = labeling[idx]
+    idx = np.where(~((np.roll(labeling_arr, 1) == labeling_arr) & (labeling_arr == blankIdx)))[0]
+    labeling_arr = labeling_arr[idx]
 
     # get rid of blank between different characters
-    idx = np.where( ~((np.roll(labeling,1) != np.roll(labeling,-1)) & (labeling == blankIdx)) )[0]
+    idx = np.where(~((np.roll(labeling_arr, 1) != np.roll(labeling_arr, -1)) & (labeling_arr == blankIdx)))[0]
 
-    if len(labeling) > 0:
-        last_idx = len(labeling)-1
-        if last_idx not in idx: idx = np.append(idx, [last_idx])
-    labeling = labeling[idx]
+    if len(labeling_arr) > 0:
+        last_idx = len(labeling_arr) - 1
+        if last_idx not in idx:
+            idx = np.append(idx, [last_idx])
+    labeling_arr = labeling_arr[idx]
 
-    return tuple(labeling)
+    return tuple(labeling_arr.astype(int))
 
-def fast_simplify_label(labeling, c, blankIdx=0):
+def fast_simplify_label(labeling: tuple[int, ...], c: int, blankIdx: int = 0) -> tuple[int, ...]:
 
     # Adding BlankIDX after Non-Blank IDX
     if labeling and c == blankIdx and labeling[-1] != blankIdx:
-        newLabeling = labeling + (c,)
+        newLabeling: tuple[int, ...] = labeling + (c,)
 
     # Case when a nonBlankChar is added after BlankChar |len(char) - 1
     elif labeling and c != blankIdx and labeling[-1] == blankIdx:
@@ -162,18 +196,11 @@ def fast_simplify_label(labeling, c, blankIdx=0):
             newLabeling = labeling[:-1] + (c,)
 
     # if consecutive blanks : Keep the original label
-    elif labeling and c == blankIdx and labeling[-1] == blankIdx:
-        newLabeling = labeling
-
-    # if empty beam & first index is blank
-    elif not labeling and c == blankIdx:
+    elif labeling and c == blankIdx and labeling[-1] == blankIdx or not labeling and c == blankIdx:
         newLabeling = labeling
 
     # if empty beam & first index is non-blank
-    elif not labeling and c != blankIdx:
-        newLabeling = labeling + (c,)
-
-    elif labeling and c != blankIdx:
+    elif not labeling and c != blankIdx or labeling and c != blankIdx:
         newLabeling = labeling + (c,)
 
     # Cases that might still require simplyfying
@@ -183,13 +210,24 @@ def fast_simplify_label(labeling, c, blankIdx=0):
 
     return newLabeling
 
-def addBeam(beamState, labeling):
-    "add beam if it does not yet exist"
+def addBeam(beamState: BeamState, labeling: tuple[int, ...]) -> None:
+    """Add beam if it does not yet exist."""
     if labeling not in beamState.entries:
         beamState.entries[labeling] = BeamEntry()
 
-def ctcBeamSearch(mat, classes, ignore_idx, lm, beamWidth=25, dict_list = []):
-    blankIdx = 0
+def ctcBeamSearch(
+    mat: NDArray[np.floating],
+    classes: list[str],
+    ignore_idx: list[int],
+    lm: Any,
+    beamWidth: int = 25,
+    dict_list: list[str] | dict[str, list[str]] | None = None,
+) -> str:
+    if dict_list is None:
+        dict_list = []
+    blankIdx: int = 0
+    maxT: int
+    maxC: int
     maxT, maxC = mat.shape
 
     # initialise beam state
@@ -273,53 +311,64 @@ def ctcBeamSearch(mat, classes, ignore_idx, lm, beamWidth=25, dict_list = []):
         res = ''
         for i,l in enumerate(bestLabeling):
             # removing repeated characters and blank.
-            if l not in ignore_idx and (not (i > 0 and bestLabeling[i - 1] == bestLabeling[i])):
+            if l not in ignore_idx and (not (i > 0 and bestLabeling[i - 1] == l)):
                 res += classes[l]
     else:
         res = last.wordsearch(classes, ignore_idx, 20, dict_list)
     return res
 
 
-class CTCLabelConverter(object):
-    """ Convert between text-label and text-index """
+class CTCLabelConverter:
+    """Convert between text-label and text-index."""
 
-    def __init__(self, character, separator_list = {}, dict_pathlist = {}):
+    def __init__(
+        self,
+        character: str,
+        separator_list: dict[str, list[str]] | None = None,
+        dict_pathlist: dict[str, str] | None = None,
+    ) -> None:
         # character (str): set of the possible characters.
         dict_character = list(character)
 
-        self.dict = {}
+        self.dict: dict[str, int] = {}
         for i, char in enumerate(dict_character):
             self.dict[char] = i + 1
 
-        self.character = ['[blank]'] + dict_character  # dummy '[blank]' token for CTCLoss (index 0)
+        self.character: list[str] = ['[blank]'] + dict_character  # dummy '[blank]' token for CTCLoss (index 0)
 
-        self.separator_list = separator_list
-        separator_char = []
+        if separator_list is None:
+            separator_list = {}
+        self.separator_list: dict[str, list[str]] = separator_list
+        separator_char: list[str] = []
         for lang, sep in separator_list.items():
             separator_char += sep
-        self.ignore_idx = [0] + [i+1 for i,item in enumerate(separator_char)]
+        self.ignore_idx: list[int] = [0] + [i + 1 for i, item in enumerate(separator_char)]
 
         ####### latin dict
+        if dict_pathlist is None:
+            dict_pathlist = {}
         if len(separator_list) == 0:
-            dict_list = []
+            dict_list: list[str] = []
             for lang, dict_path in dict_pathlist.items():
                 try:
-                    with open(dict_path, "r", encoding = "utf-8-sig") as input_file:
-                        word_count =  input_file.read().splitlines()
+                    with open(dict_path, "r", encoding="utf-8-sig") as input_file:
+                        word_count = input_file.read().splitlines()
                     dict_list += word_count
-                except:
+                except (FileNotFoundError, OSError, UnicodeDecodeError):
                     pass
         else:
-            dict_list = {}
+            dict_list: dict[str, list[str]] = {}
             for lang, dict_path in dict_pathlist.items():
-                with open(dict_path, "r", encoding = "utf-8-sig") as input_file:
-                    word_count =  input_file.read().splitlines()
+                with open(dict_path, "r", encoding="utf-8-sig") as input_file:
+                    word_count = input_file.read().splitlines()
                 dict_list[lang] = word_count
 
-        self.dict_list = dict_list
+        self.dict_list: list[str] | dict[str, list[str]] = dict_list
 
-    def encode(self, text, batch_max_length=25):
-        """convert text-label into text-index.
+    def encode(
+        self, text: list[str], batch_max_length: int = 25
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Convert text-label into text-index.
         input:
             text: text labels of each image. [batch_size]
 
@@ -328,22 +377,24 @@ class CTCLabelConverter(object):
                     [sum(text_lengths)] = [text_index_0 + text_index_1 + ... + text_index_(n - 1)]
             length: length of each text. [batch_size]
         """
-        length = [len(s) for s in text]
-        text = ''.join(text)
-        text = [self.dict[char] for char in text]
+        length: list[int] = [len(s) for s in text]
+        joined_text: str = ''.join(text)
+        text_indices: list[int] = [self.dict[char] for char in joined_text]
 
-        return (torch.IntTensor(text), torch.IntTensor(length))
+        return (torch.IntTensor(text_indices), torch.IntTensor(length))
 
-    def decode_greedy(self, text_index, length):
-        """ convert text-index into text-label. """
-        texts = []
-        index = 0
+    def decode_greedy(
+        self, text_index: torch.Tensor, length: torch.Tensor
+    ) -> list[str]:
+        """Convert text-index into text-label."""
+        texts: list[str] = []
+        index: int = 0
         for l in length:
             t = text_index[index:index + l]
             # Returns a boolean array where true is when the value is not repeated
-            a = np.insert(~((t[1:]==t[:-1])),0,True)
+            a = np.insert(~(t[1:] == t[:-1]), 0, True)
             # Returns a boolean array where true is when the value is not in the ignore_idx list
-            b = ~np.isin(t,np.array(self.ignore_idx))
+            b = ~np.isin(t, np.array(self.ignore_idx))
             # Combine the two boolean array
             c = a & b
             # Gets the corresponding character according to the saved indexes
@@ -352,16 +403,16 @@ class CTCLabelConverter(object):
             index += l
         return texts
 
-    def decode_beamsearch(self, mat, beamWidth=5):
-        texts = []
+    def decode_beamsearch(self, mat: NDArray[np.floating], beamWidth: int = 5) -> list[str]:
+        texts: list[str] = []
         for i in range(mat.shape[0]):
             t = ctcBeamSearch(mat[i], self.character, self.ignore_idx, None, beamWidth=beamWidth)
             texts.append(t)
         return texts
 
-    def decode_wordbeamsearch(self, mat, beamWidth=5):
-        texts = []
-        argmax = np.argmax(mat, axis = 2)
+    def decode_wordbeamsearch(self, mat: NDArray[np.floating], beamWidth: int = 5) -> list[str]:
+        texts: list[str] = []
+        argmax = np.argmax(mat, axis=2)
 
         for i in range(mat.shape[0]):
             string = ''
@@ -393,8 +444,9 @@ class CTCLabelConverter(object):
             texts.append(string)
         return texts
 
-def merge_to_free(merge_result, free_list):
-    merge_result_buf, mr_buf = [], []
+def merge_to_free(merge_result: list[Any], free_list: list[Any]) -> list[Any]:
+    merge_result_buf: list[list[Any]] = []
+    mr_buf: list[Any] = []
 
     if not free_list:
         return merge_result
@@ -435,7 +487,11 @@ def merge_to_free(merge_result, free_list):
     [merge_result.extend(r) for r in merge_result_buf]
     return merge_result
 
-def four_point_transform(image, rect):
+def four_point_transform(image: NDArray[np.uint8], rect: NDArray[np.floating]) -> NDArray[np.uint8]:
+    tl: NDArray[np.floating]
+    tr: NDArray[np.floating]
+    br: NDArray[np.floating]
+    bl: NDArray[np.floating]
     (tl, tr, br, bl) = rect
 
     widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
@@ -457,9 +513,20 @@ def four_point_transform(image, rect):
 
     return warped
 
-def group_text_box(polys, slope_ths = 0.1, ycenter_ths = 0.5, height_ths = 0.5, width_ths = 1.0, add_margin = 0.05, sort_output = True):
+def group_text_box(
+    polys: list[list[float]],
+    slope_ths: float = 0.1,
+    ycenter_ths: float = 0.5,
+    height_ths: float = 0.5,
+    width_ths: float = 1.0,
+    add_margin: float = 0.05,
+    sort_output: bool = True,
+) -> tuple[list[list[float]], list[list[list[float]]]]:
     # poly top-left, top-right, low-right, low-left
-    horizontal_list, free_list,combined_list, merged_list = [],[],[],[]
+    horizontal_list: list[list[float]] = []
+    free_list: list[list[list[float]]] = []
+    combined_list: list[list[float]] = []
+    merged_list: list[list[float]] = []
 
     for poly in polys:
         slope_up = (poly[3]-poly[1])/np.maximum(10, (poly[2]-poly[0]))
@@ -690,7 +757,7 @@ def get_paragraph(raw_result, x_ths=1, y_ths=0.5, mode = 'ltr'):
                 current_group += 1
     # arrage order in paragraph
     result = []
-    for i in set(box[7] for box in box_group):
+    for i in {box[7] for box in box_group}:
         current_box_group = [box for box in box_group if box[7]==i]
         mean_height = np.mean([box[5] for box in current_box_group])
         min_gx = min([box[1] for box in current_box_group])
@@ -741,7 +808,7 @@ def printProgressBar(prefix='', suffix='', decimals=1, length=100, fill='█'):
 
 def reformat_input(image):
     if type(image) == str:
-        if image.startswith('http://') or image.startswith('https://'):
+        if image.startswith(('http://', 'https://')):
             tmp, _ = urlretrieve(image , reporthook=printProgressBar(prefix = 'Progress:', suffix = 'Complete', length = 50))
             img_cv_grey = cv2.imread(tmp, cv2.IMREAD_GRAYSCALE)
             os.remove(tmp)

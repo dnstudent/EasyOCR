@@ -1,13 +1,10 @@
 import os
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn
 
 #import backbones
 #import decoders
-from .. import backbones
-from .. import decoders
+from .. import backbones, decoders
 
 
 class BasicModel(nn.Module):
@@ -62,9 +59,8 @@ class SegDetectorModel(nn.Module):
         #if self.training:
         if training:
             for key, value in batch.items():
-                if value is not None:
-                    if hasattr(value, 'to'):
-                        batch[key] = value.to(self.device)
+                if value is not None and hasattr(value, 'to'):
+                    batch[key] = value.to(self.device)
             loss_with_metrics = self.criterion(pred, batch)
             loss, metrics = loss_with_metrics
             return loss, pred, metrics

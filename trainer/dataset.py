@@ -1,16 +1,15 @@
-import os
-import sys
-import re
 import math
-import torch
-import pandas  as pd
-
-from natsort import natsorted
-from PIL import Image
-import numpy as np
+import os
+import re
 from itertools import accumulate as _accumulate
-from torch.utils.data import Dataset, ConcatDataset, Subset
-import torchvision.transforms as transforms
+
+import numpy as np
+import pandas as pd
+import torch
+from PIL import Image
+from torch.utils.data import ConcatDataset, Dataset, Subset
+from torchvision import transforms
+
 
 def contrast_grey(img):
     high = np.percentile(img, 90)
@@ -27,7 +26,7 @@ def adjust_contrast_grey(img, target = 0.4):
     return img
 
 
-class Batch_Balanced_Dataset(object):
+class Batch_Balanced_Dataset:
 
     def __init__(self, opt):
         """
@@ -35,7 +34,7 @@ class Batch_Balanced_Dataset(object):
         For example, when select_data is "MJ-ST" and batch_ratio is "0.5-0.5",
         the 50% of the batch is filled with MJ and the other 50% of the batch is filled with ST.
         """
-        log = open(f'./saved_models/{opt.experiment_name}/log_dataset.txt', 'a')
+        log = open(f'./saved_models/{opt.experiment_name}/log_dataset.txt', 'a')  # noqa: SIM115
         dashed_line = '-' * 80
         print(dashed_line)
         log.write(dashed_line + '\n')
@@ -73,11 +72,11 @@ class Batch_Balanced_Dataset(object):
             batch_size_list.append(str(_batch_size))
             Total_batch_size += _batch_size
 
-            _loader_kwargs = dict(batch_size=_batch_size,
-                                  shuffle=True,
-                                  num_workers=int(opt.workers),
-                                  collate_fn=_AlignCollate,
-                                  pin_memory=torch.cuda.is_available())
+            _loader_kwargs = {'batch_size': _batch_size,
+                                  'shuffle': True,
+                                  'num_workers': int(opt.workers),
+                                  'collate_fn': _AlignCollate,
+                                  'pin_memory': torch.cuda.is_available()}
             if _loader_kwargs['num_workers'] > 0:
                 _loader_kwargs['prefetch_factor'] = 512
             _data_loader = torch.utils.data.DataLoader(_dataset, **_loader_kwargs)
@@ -160,8 +159,7 @@ class OCRDataset(Dataset):
                 try:
                     if len(label) > self.opt.batch_max_length:
                         continue
-                except:
-                    print(label)
+                except (RuntimeError, ValueError, TypeError):                    print(label)
                 out_of_char = f'[^{self.opt.character}]'
                 if re.search(out_of_char, label.lower()):
                     continue
@@ -191,7 +189,7 @@ class OCRDataset(Dataset):
 
         return (img, label)
 
-class ResizeNormalize(object):
+class ResizeNormalize:
 
     def __init__(self, size, interpolation=Image.Resampling.BICUBIC):
         self.size = size
@@ -205,7 +203,7 @@ class ResizeNormalize(object):
         return img
 
 
-class NormalizePAD(object):
+class NormalizePAD:
 
     def __init__(self, max_size, PAD_type='right'):
         self.toTensor = transforms.ToTensor()
@@ -225,7 +223,7 @@ class NormalizePAD(object):
         return Pad_img
 
 
-class AlignCollate(object):
+class AlignCollate:
 
     def __init__(self, imgH=32, imgW=100, keep_ratio_with_pad=False, contrast_adjust = 0.):
         self.imgH = imgH

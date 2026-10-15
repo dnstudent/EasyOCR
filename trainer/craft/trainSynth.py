@@ -1,24 +1,21 @@
-# -*- coding: utf-8 -*-
 import argparse
+import multiprocessing as mp
 import os
 import shutil
 import time
-import yaml
-import multiprocessing as mp
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
 import wandb
-
-from config.load_config import load_yaml, DotDict
+import yaml
+from config.load_config import DotDict, load_yaml
 from data.dataset import SynthTextDataSet
-from loss.mseloss import Maploss_v2, Maploss_v3
-from model.craft import CRAFT
-from metrics.eval_det_iou import DetectionIoUEvaluator
 from eval import main_eval
-from utils.util import copyStateDict, save_parser
+from loss.mseloss import Maploss_v2, Maploss_v3
+from metrics.eval_det_iou import DetectionIoUEvaluator
+from model.craft import CRAFT
+from torch import nn, optim
+from utils.util import copyStateDict
 
 
 class Trainer:
@@ -63,7 +60,7 @@ class Trainer:
 
     def get_load_param(self, gpu):
         if self.config.train.ckpt_path is not None:
-            map_location = {"cuda:%d" % 0: "cuda:%d" % gpu}
+            map_location = {f"cuda:{0}": f"cuda:{gpu}"}
             param = torch.load(self.config.train.ckpt_path, map_location=map_location, weights_only=False)
         else:
             param = None
@@ -106,11 +103,11 @@ class Trainer:
         if self.gpu == 0 and self.config.wandb_opt:
             wandb.log(
                 {
-                    "{} IoU Recall".format(dataset): np.round(metrics["recall"], 3),
-                    "{} IoU Precision".format(dataset): np.round(
+                    f"{dataset} IoU Recall": np.round(metrics["recall"], 3),
+                    f"{dataset} IoU Precision": np.round(
                         metrics["precision"], 3
                     ),
-                    "{} IoU F1-score".format(dataset): np.round(metrics["hmean"], 3),
+                    f"{dataset} IoU F1-score": np.round(metrics["hmean"], 3),
                 }
             )
 

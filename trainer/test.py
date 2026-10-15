@@ -1,18 +1,11 @@
-import os
 import time
-import string
-import argparse
 
 import torch
-import torch.backends.cudnn as cudnn
-import torch.utils.data
 import torch.nn.functional as F
-import numpy as np
+import torch.utils.data
 from nltk.metrics.distance import edit_distance
+from utils import Averager
 
-from utils import CTCLabelConverter, AttnLabelConverter, Averager
-from dataset import hierarchical_dataset, AlignCollate
-from model import Model
 
 def validation(model, criterion, evaluation_loader, converter, opt, device):
     """ validation or evaluation """
@@ -101,8 +94,7 @@ def validation(model, criterion, evaluation_loader, converter, opt, device):
             # calculate confidence score (= multiply of pred_max_prob)
             try:
                 confidence_score = pred_max_prob.cumprod(dim=0)[-1]
-            except:
-                confidence_score = 0  # for empty pred case, when prune after "end of sentence" token ([s])
+            except (RuntimeError, ValueError, TypeError):                confidence_score = 0  # for empty pred case, when prune after "end of sentence" token ([s])
             confidence_score_list.append(confidence_score)
             # print(pred, gt, pred==gt, confidence_score)
 

@@ -1,4 +1,3 @@
-import os
 from unit_test import UnitTest
 
 # %% Set up paths 

@@ -1,5 +1,5 @@
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class MaskL1Loss(nn.Module):
@@ -9,10 +9,10 @@ class MaskL1Loss(nn.Module):
     def forward(self, pred: torch.Tensor, gt, mask):
         mask_sum = mask.sum()
         if mask_sum.item() == 0:
-            return mask_sum, dict(l1_loss=mask_sum)
+            return mask_sum, {"l1_loss": mask_sum}
         else:
             loss = (torch.abs(pred[:, 0] - gt) * mask).sum() / mask_sum
-            return loss, dict(l1_loss=loss)
+            return loss, {"l1_loss": loss}
 
 
 class BalanceL1Loss(nn.Module):
@@ -38,4 +38,4 @@ class BalanceL1Loss(nn.Module):
         negative_loss = negative_loss.sum() / negative_count
         positive_loss = positive.sum() / positive_count
         return positive_loss + negative_loss,\
-            dict(l1_loss=positive_loss, nge_l1_loss=negative_loss)
+            {"l1_loss": positive_loss, "nge_l1_loss": negative_loss}
