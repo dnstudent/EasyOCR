@@ -41,11 +41,17 @@ The trained model with this code recorded a level of performance similar to that
 
 ### Installation
 
-Install using `pip`
+This trainer targets Python >= 3.10 with torch 2.14 / torchvision 0.29 (verified on
+Python 3.14). From the repository root, install the project plus the `craft` tooling
+group with [uv](https://docs.astral.sh/uv/):
 
 ``` bash
-pip install -r requirements.txt
+uv sync --group craft
 ```
+
+The `craft` group adds wandb, scipy, scikit-image, tqdm and ipdb on top of the
+project dependencies. (The old `requirements.txt` pinned a torch 1.13 stack and was
+removed; `uv.lock` is the source of truth now.)
 
 
 ### Training
@@ -77,16 +83,24 @@ pip install -r requirements.txt
 4. Run training script like below (If you have multi-gpu, run train_distributed.py)
 5. Then, experiment results will be saved to ```./exp/[yaml]``` by default.
 
+Device support: `train.py` auto-detects cuda -> mps -> cpu (set `amp: False` in the
+config when running on MPS or CPU; AMP stays CUDA-only). `trainSynth.py` and
+`train_distributed.py` remain CUDA/DDP-only.
+
 * Step 1 : To train CRAFT with SynthText dataset from scratch
     * Note : This step is not necessary if you use <a href="https://drive.google.com/file/d/1enVIsgNvBf3YiRsVkxodspOn55PIK-LJ/view?usp=sharing">this pretrain</a> as a checkpoint when start training step 2. You can download and put it in `exp/CRAFT_clr_amp_29500.pth` and change `ckpt_path` in the config file according to your local setup.
     ```
-    CUDA_VISIBLE_DEVICES=0 python3 trainSynth.py --yaml=syn_train
+    CUDA_VISIBLE_DEVICES=0 uv run --group craft python trainSynth.py --yaml=syn_train
     ```
 
 * Step 2 : To train CRAFT with [SynthText + IC15] or custom dataset
     ```
-    CUDA_VISIBLE_DEVICES=0 python3 train.py --yaml=custom_data_train               ## if you run on single GPU
-    CUDA_VISIBLE_DEVICES=0,1 python3 train_distributed.py --yaml=custom_data_train   ## if you run on multi GPU
+    CUDA_VISIBLE_DEVICES=0 uv run --group craft python train.py --yaml=custom_data_train               ## if you run on single GPU
+    CUDA_VISIBLE_DEVICES=0,1 uv run --group craft python train_distributed.py --yaml=custom_data_train   ## if you run on multi GPU
+    ```
+    On an Apple Silicon Mac without CUDA, `train.py` picks MPS automatically:
+    ```
+    uv run --group craft python train.py --yaml=custom_data_train
     ```
 
 ### Arguments

@@ -59,6 +59,13 @@ packages = ["easyocr"]
 include = ["easyocr", "LICENSE", "README.md"]
 
 [dependency-groups]
+craft = [
+    "ipdb>=0.13.13",
+    "scikit-image>=0.25.2",
+    "scipy>=1.15.3",
+    "tqdm>=4.70.1",
+    "wandb>=0.30.0",
+]
 trainer = [
     "natsort>=8.4.0",
     "nltk>=3.10.3",

@@ -6,6 +6,7 @@
     - Drop scipy and scikit-image dependencies; OpenCV covers their use cases (equivalence verified against the old implementations)
     - Drop all Python 2 compatibility idioms
     - Trainer (non-craft): device auto-detect cuda -> mps -> cpu, torch.amp (CUDA-only AMP), guarded prefetch/pin_memory; keep `module.*` checkpoint key format
+    - trainer/craft: fix torch 2.14/numpy 2 hard failures (removed MSELoss kwargs, dead torchvision<0.13 branch, `np.int`), torch.amp migration, `train.py` device auto-detect cuda -> mps -> cpu (verified with a weak-supervision smoke run on MPS); `trainSynth.py`/`train_distributed.py` stay CUDA/DDP-only; craft tooling deps (wandb, scipy, scikit-image, tqdm, ipdb) in a `craft` dependency group, stale `trainer/craft/requirements.txt` removed
 - 24 September 2024 - Version 1.7.2
     - Fix several compatibilities
 - 4 September 2023 - Version 1.7.1
