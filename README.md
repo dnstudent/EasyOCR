@@ -47,7 +47,7 @@ pip install git+https://github.com/dnstudent/EasyOCR.git
 ```
 
 Or, for development, use [uv](https://docs.astral.sh/uv/) with the committed lockfile
-(requires Python 3.10+; the project targets torch 2.14 / torchvision 0.29):
+(requires Python 3.12+; the project targets torch 2.14 / torchvision 0.29):
 
 ``` bash
 uv sync --all-extras
