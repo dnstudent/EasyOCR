@@ -1,10 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-import torchvision
 from torchvision import models
 from collections import namedtuple
-from packaging import version
 
 
 def init_weights(modules):
@@ -23,13 +21,9 @@ def init_weights(modules):
 class vgg16_bn(torch.nn.Module):
     def __init__(self, pretrained=True, freeze=True):
         super(vgg16_bn, self).__init__()
-        if version.parse(torchvision.__version__) >= version.parse('0.13'):
-            vgg_pretrained_features = models.vgg16_bn(
-                weights=models.VGG16_BN_Weights.DEFAULT if pretrained else None
-            ).features
-        else: #torchvision.__version__ < 0.13
-            models.vgg.model_urls['vgg16_bn'] = models.vgg.model_urls['vgg16_bn'].replace('https://', 'http://')
-            vgg_pretrained_features = models.vgg16_bn(pretrained=pretrained).features
+        vgg_pretrained_features = models.vgg16_bn(
+            weights=models.VGG16_BN_Weights.DEFAULT if pretrained else None
+        ).features
 
         self.slice1 = torch.nn.Sequential()
         self.slice2 = torch.nn.Sequential()

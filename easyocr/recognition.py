@@ -90,7 +90,7 @@ class AlignCollate(object):
             else:
                 resized_w = math.ceil(self.imgH * ratio)
 
-            resized_image = image.resize((resized_w, self.imgH), Image.BICUBIC)
+            resized_image = image.resize((resized_w, self.imgH), Image.Resampling.BICUBIC)
             resized_images.append(transform(resized_image))
 
         image_tensors = torch.cat([t.unsqueeze(0) for t in resized_images], 0)
@@ -174,7 +174,7 @@ def get_recognizer(recog_network, network_params, character,\
         model.load_state_dict(new_state_dict)
         if quantize:
             try:
-                torch.quantization.quantize_dynamic(model, dtype=torch.qint8, inplace=True)
+                torch.ao.quantization.quantize_dynamic(model, dtype=torch.qint8, inplace=True)
             except:
                 pass
     else:

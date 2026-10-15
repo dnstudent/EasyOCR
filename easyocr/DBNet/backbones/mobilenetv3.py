@@ -238,7 +238,7 @@ class MobileNetV3(nn.Module):
 def mobilenet_v3_large(pretrained=False, **kwargs):
     model = MobileNetV3(mode='large', **kwargs)
     if pretrained:
-        state_dict = torch.load('mobilenetv3_large.pth.tar')
+        state_dict = torch.load('mobilenetv3_large.pth.tar', map_location='cpu', weights_only=False)
         model.load_state_dict(state_dict, strict=True)
         # raise NotImplementedError
     return model
@@ -246,7 +246,7 @@ def mobilenet_v3_large(pretrained=False, **kwargs):
 def mobilenet_v3_small(pretrained=False, **kwargs):
     model = MobileNetV3(mode='small', **kwargs)
     if pretrained:
-        state_dict = torch.load('mobilenetv3_small_67.4.pth.tar')
+        state_dict = torch.load('mobilenetv3_small_67.4.pth.tar', map_location='cpu', weights_only=False)
         model.load_state_dict(state_dict, strict=True)
         # raise NotImplementedError
     return model

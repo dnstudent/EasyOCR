@@ -135,7 +135,7 @@ def get_detector(trained_model, backbone = 'resnet18', device='cpu', quantize=Tr
     if torch.device(device).type == 'cpu':
         if quantize:
             try:
-                torch.quantization.quantize_dynamic(dbnet, dtype=torch.qint8, inplace=True)
+                torch.ao.quantization.quantize_dynamic(dbnet, dtype=torch.qint8, inplace=True)
             except:
                 pass
     else:

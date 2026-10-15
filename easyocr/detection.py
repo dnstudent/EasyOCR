@@ -1,6 +1,5 @@
 import torch
 import torch.backends.cudnn as cudnn
-from torch.autograd import Variable
 from PIL import Image
 from collections import OrderedDict
 
@@ -78,7 +77,7 @@ def get_detector(trained_model, device='cpu', quantize=True, cudnn_benchmark=Fal
         net.load_state_dict(copyStateDict(torch.load(trained_model, map_location=device, weights_only=False)))
         if quantize:
             try:
-                torch.quantization.quantize_dynamic(net, dtype=torch.qint8, inplace=True)
+                torch.ao.quantization.quantize_dynamic(net, dtype=torch.qint8, inplace=True)
             except:
                 pass
     else:

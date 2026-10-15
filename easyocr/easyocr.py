@@ -12,18 +12,11 @@ import cv2
 import torch
 import os
 import sys
+from pathlib import Path
 from PIL import Image
 from logging import getLogger
 import yaml
 import json
-
-if sys.version_info[0] == 2:
-    from io import open
-    from six.moves.urllib.request import urlretrieve
-    from pathlib2 import Path
-else:
-    from urllib.request import urlretrieve
-    from pathlib import Path
 
 LOGGER = getLogger(__name__)
 
@@ -86,8 +79,8 @@ class Reader(object):
 
         # check and download detection model
         self.support_detection_network = ['craft', 'dbnet18']
-        self.quantize=quantize, 
-        self.cudnn_benchmark=cudnn_benchmark
+        self.quantize = quantize
+        self.cudnn_benchmark = cudnn_benchmark
         if detector:
             detector_path = self.getDetectorPath(detect_network)
         

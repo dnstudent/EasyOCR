@@ -10,12 +10,8 @@ from scipy import ndimage
 import hashlib
 import sys, os
 from zipfile import ZipFile
+from urllib.request import urlretrieve
 from .imgproc import loadImage
-
-if sys.version_info[0] == 2:
-    from six.moves.urllib.request import urlretrieve
-else:
-    from urllib.request import urlretrieve
 
 def consecutive(data, mode ='first', stepsize=1):
     """Group consecutive values in ``data`` and return either first or last indices."""
