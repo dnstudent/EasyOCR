@@ -21,7 +21,7 @@ from eval import main_eval
 from utils.util import copyStateDict, save_parser
 
 
-class Trainer(object):
+class Trainer:
     def __init__(self, config, gpu):
 
         self.config = config
@@ -150,7 +150,7 @@ class Trainer(object):
         # LOSS --------------------------------------------------------------------------------------------------------#
         # mixed precision
         if self.config.train.amp:
-            scaler = torch.cuda.amp.GradScaler()
+            scaler = torch.amp.GradScaler("cuda")
 
             # load model
             if (
@@ -195,7 +195,7 @@ class Trainer(object):
                 confidence_mask_label = confidence_mask.cuda(non_blocking=True)
 
                 if self.config.train.amp:
-                    with torch.cuda.amp.autocast():
+                    with torch.amp.autocast("cuda"):
 
                         output, _ = craft(images)
                         out1 = output[:, :, :, 0]

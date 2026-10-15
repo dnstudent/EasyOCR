@@ -4,7 +4,7 @@ import cv2
 from data.boxEnlarge import enlargebox
 
 
-class GaussianBuilder(object):
+class GaussianBuilder:
     def __init__(self, init_size, sigma, enlarge_region, enlarge_affinity):
         self.init_size = init_size
         self.sigma = sigma

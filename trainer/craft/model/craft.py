@@ -12,7 +12,7 @@ from model.vgg16_bn import vgg16_bn, init_weights
 
 class double_conv(nn.Module):
     def __init__(self, in_ch, mid_ch, out_ch):
-        super(double_conv, self).__init__()
+        super().__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_ch + mid_ch, mid_ch, kernel_size=1),
             nn.BatchNorm2d(mid_ch),
@@ -29,7 +29,7 @@ class double_conv(nn.Module):
 
 class CRAFT(nn.Module):
     def __init__(self, pretrained=True, freeze=False, amp=False):
-        super(CRAFT, self).__init__()
+        super().__init__()
 
         self.amp = amp
 
@@ -60,7 +60,7 @@ class CRAFT(nn.Module):
     def forward(self, x):
         """ Base network """
         if self.amp:
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast("cuda"):
                 sources = self.basenet(x)
 
                 """ U network """

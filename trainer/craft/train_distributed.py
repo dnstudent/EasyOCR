@@ -21,7 +21,7 @@ from metrics.eval_det_iou import DetectionIoUEvaluator
 from utils.util import copyStateDict, save_parser
 
 
-class Trainer(object):
+class Trainer:
     def __init__(self, config, gpu, mode):
 
         self.config = config
@@ -221,7 +221,7 @@ class Trainer(object):
         # LOSS --------------------------------------------------------------------------------------------------------#
         # mixed precision
         if self.config.train.amp:
-            scaler = torch.cuda.amp.GradScaler()
+            scaler = torch.amp.GradScaler("cuda")
 
             if (
                 self.config.train.ckpt_path is not None
@@ -296,7 +296,7 @@ class Trainer(object):
                     confidence_mask_label = confidence_masks
 
                 if self.config.train.amp:
-                    with torch.cuda.amp.autocast():
+                    with torch.amp.autocast("cuda"):
 
                         output, _ = craft(images)
                         out1 = output[:, :, :, 0]

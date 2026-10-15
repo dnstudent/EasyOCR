@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class Loss(nn.Module):
     def __init__(self):
-        super(Loss, self).__init__()
+        super().__init__()
 
     def forward(self, gt_region, gt_affinity, pred_region, pred_affinity, conf_map):
         loss = torch.mean(
@@ -17,7 +17,7 @@ class Loss(nn.Module):
 class Maploss_v2(nn.Module):
     def __init__(self):
 
-        super(Maploss_v2, self).__init__()
+        super().__init__()
 
     def batch_image_loss(self, pred_score, label_score, neg_rto, n_min_neg):
 
@@ -98,7 +98,7 @@ class Maploss_v2(nn.Module):
 class Maploss_v3(nn.Module):
     def __init__(self):
 
-        super(Maploss_v3, self).__init__()
+        super().__init__()
 
     def single_image_loss(self, pre_loss, loss_label, neg_rto, n_min_neg):
 

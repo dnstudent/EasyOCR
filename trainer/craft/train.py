@@ -21,12 +21,18 @@ from metrics.eval_det_iou import DetectionIoUEvaluator
 from utils.util import copyStateDict, save_parser
 
 
-class Trainer(object):
+class Trainer:
     def __init__(self, config, gpu, mode):
 
         self.config = config
         self.gpu = gpu
         self.mode = mode
+        if torch.cuda.is_available():
+            self.device = torch.device(f"cuda:{gpu}")
+        elif torch.backends.mps.is_available():
+            self.device = torch.device("mps")
+        else:
+            self.device = torch.device("cpu")
         self.net_param = self.get_load_param(gpu)
 
     def get_synth_loader(self):
@@ -53,7 +59,7 @@ class Trainer(object):
             shuffle=False,
             num_workers=self.config.train.num_workers,
             drop_last=True,
-            pin_memory=True,
+            pin_memory=self.device.type == "cuda",
         )
         return syn_loader
 
@@ -83,8 +89,7 @@ class Trainer(object):
     def get_load_param(self, gpu):
 
         if self.config.train.ckpt_path is not None:
-            map_location = "cuda:%d" % gpu
-            param = torch.load(self.config.train.ckpt_path, map_location=map_location, weights_only=False)
+            param = torch.load(self.config.train.ckpt_path, map_location=self.device, weights_only=False)
         else:
             param = None
 
@@ -137,40 +142,45 @@ class Trainer(object):
 
     def train(self, buffer_dict):
 
-        torch.cuda.set_device(self.gpu)
+        if self.device.type == "cuda":
+            torch.cuda.set_device(self.device)
+        # AMP stays CUDA-only: torch.amp.GradScaler has no MPS implementation
+        use_amp = self.config.train.amp and self.device.type == "cuda"
 
         # MODEL -------------------------------------------------------------------------------------------------------#
         # SUPERVISION model
         if self.config.mode == "weak_supervision":
             if self.config.train.backbone == "vgg":
-                supervision_model = CRAFT(pretrained=False, amp=self.config.train.amp)
+                supervision_model = CRAFT(pretrained=False, amp=use_amp)
             else:
                 raise Exception("Undefined architecture")
 
-            supervision_device = self.gpu
+            supervision_device = self.device
             if self.config.train.ckpt_path is not None:
                 supervision_param = self.get_load_param(supervision_device)
                 supervision_model.load_state_dict(
                     copyStateDict(supervision_param["craft"])
                 )
-                supervision_model = supervision_model.to(f"cuda:{supervision_device}")
-            print(f"Supervision model loading on : gpu {supervision_device}")
+                supervision_model = supervision_model.to(supervision_device)
+            print(f"Supervision model loading on : {supervision_device}")
         else:
             supervision_model, supervision_device = None, None
 
         # TRAIN model
         if self.config.train.backbone == "vgg":
-            craft = CRAFT(pretrained=False, amp=self.config.train.amp)
+            craft = CRAFT(pretrained=False, amp=use_amp)
         else:
             raise Exception("Undefined architecture")
 
         if self.config.train.ckpt_path is not None:
             craft.load_state_dict(copyStateDict(self.net_param["craft"]))
 
-        craft = craft.cuda()
-        craft = torch.nn.DataParallel(craft)
+        craft = craft.to(self.device)
+        if self.device.type == "cuda" and torch.cuda.device_count() > 1:
+            craft = torch.nn.DataParallel(craft)
 
-        torch.backends.cudnn.benchmark = True
+        if self.device.type == "cuda":
+            torch.backends.cudnn.benchmark = True
 
         # DATASET -----------------------------------------------------------------------------------------------------#
 
@@ -193,7 +203,7 @@ class Trainer(object):
             shuffle=False,
             num_workers=self.config.train.num_workers,
             drop_last=False,
-            pin_memory=True,
+            pin_memory=self.device.type == "cuda",
         )
 
         # OPTIMIZER ---------------------------------------------------------------------------------------------------#
@@ -210,8 +220,8 @@ class Trainer(object):
 
         # LOSS --------------------------------------------------------------------------------------------------------#
         # mixed precision
-        if self.config.train.amp:
-            scaler = torch.cuda.amp.GradScaler()
+        if use_amp:
+            scaler = torch.amp.GradScaler("cuda")
 
             if (
                     self.config.train.ckpt_path is not None
@@ -255,20 +265,20 @@ class Trainer(object):
                         self.config.train.lr,
                     )
 
-                images = images.cuda(non_blocking=True)
-                region_scores = region_scores.cuda(non_blocking=True)
-                affinity_scores = affinity_scores.cuda(non_blocking=True)
-                confidence_masks = confidence_masks.cuda(non_blocking=True)
+                images = images.to(self.device, non_blocking=True)
+                region_scores = region_scores.to(self.device, non_blocking=True)
+                affinity_scores = affinity_scores.to(self.device, non_blocking=True)
+                confidence_masks = confidence_masks.to(self.device, non_blocking=True)
 
                 if self.config.train.use_synthtext:
                     # Synth image load
                     syn_image, syn_region_label, syn_affi_label, syn_confidence_mask = next(
                         batch_syn
                     )
-                    syn_image = syn_image.cuda(non_blocking=True)
-                    syn_region_label = syn_region_label.cuda(non_blocking=True)
-                    syn_affi_label = syn_affi_label.cuda(non_blocking=True)
-                    syn_confidence_mask = syn_confidence_mask.cuda(non_blocking=True)
+                    syn_image = syn_image.to(self.device, non_blocking=True)
+                    syn_region_label = syn_region_label.to(self.device, non_blocking=True)
+                    syn_affi_label = syn_affi_label.to(self.device, non_blocking=True)
+                    syn_confidence_mask = syn_confidence_mask.to(self.device, non_blocking=True)
 
                     # concat syn & custom image
                     images = torch.cat((syn_image, images), 0)
@@ -284,8 +294,8 @@ class Trainer(object):
                     affinity_image_label = affinity_scores
                     confidence_mask_label = confidence_masks
 
-                if self.config.train.amp:
-                    with torch.cuda.amp.autocast():
+                if use_amp:
+                    with torch.amp.autocast("cuda"):
 
                         output, _ = craft(images)
                         out1 = output[:, :, :, 0]
@@ -317,6 +327,7 @@ class Trainer(object):
                         out2,
                         confidence_mask_label,
                         self.config.train.neg_rto,
+                        self.config.train.n_min_neg,
                     )
 
                     optimizer.zero_grad()
@@ -370,7 +381,7 @@ class Trainer(object):
                             + ".pth"
                     )
 
-                    if self.config.train.amp:
+                    if use_amp:
                         save_param_dic["scaler"] = scaler.state_dict()
                         save_param_path = (
                                 self.config.results_dir
@@ -394,7 +405,11 @@ class Trainer(object):
                     break
 
             if self.config.mode == "weak_supervision":
-                state_dict = craft.module.state_dict()
+                state_dict = (
+                    craft.module.state_dict()
+                    if isinstance(craft, nn.DataParallel)
+                    else craft.state_dict()
+                )
                 supervision_model.load_state_dict(state_dict)
                 trn_real_dataset.update_model(supervision_model)
 
@@ -408,7 +423,7 @@ class Trainer(object):
                 self.config.results_dir + "/CRAFT_clr_" + repr(train_step) + ".pth"
         )
 
-        if self.config.train.amp:
+        if use_amp:
             save_param_dic["scaler"] = scaler.state_dict()
             save_param_path = (
                     self.config.results_dir
