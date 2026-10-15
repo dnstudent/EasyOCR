@@ -47,6 +47,7 @@ Repository = "https://github.com/jaidedai/easyocr.git"
 export = [
     "onnx>=1.23.2",
     "onnxruntime>=1.24.3",
+    "onnxscript>=0.7.2",
 ]
 dbnet-dcn = [
     "ninja>=1.13.2",
