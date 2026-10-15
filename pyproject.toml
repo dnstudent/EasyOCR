@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "easyocr"
+version = "1.7.3"
+description = "End-to-End Multi-Lingual Optical Character Recognition (OCR) Solution"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Rakpong Kittinaradorn", email = "r.kittinaradorn@gmail.com" },
+]
+keywords = ["ocr", "optical character recognition", "deep learning", "neural network"]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "numpy>=2.2.6",
+    "opencv-python-headless>=5.0.0.93",
+    "packaging>=26.3",
+    "pillow>=12.3.0",
+    "pyclipper>=1.4.0",
+    "python-bidi>=0.6.11",
+    "pyyaml>=6.0.3",
+    "scikit-image>=0.25.2",
+    "scipy>=1.15.3",
+    "shapely>=2.1.2",
+    "torch>=2.14.1",
+    "torchvision>=0.29.1",
+]
+
+[project.scripts]
+easyocr = "easyocr.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jaidedai/easyocr"
+Repository = "https://github.com/jaidedai/easyocr.git"
+
+[project.optional-dependencies]
+export = [
+    "onnx>=1.23.2",
+    "onnxruntime>=1.24.3",
+]
+dbnet-dcn = [
+    "ninja>=1.13.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["easyocr"]
+
+[tool.hatch.build.targets.sdist]
+include = ["easyocr", "LICENSE", "README.md"]
