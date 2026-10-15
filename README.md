@@ -40,10 +40,10 @@ For the latest stable release:
 pip install easyocr
 ```
 
-For the latest development release:
+For the latest development release (this fork):
 
 ``` bash
-pip install git+https://github.com/JaidedAI/EasyOCR.git
+pip install git+https://github.com/dnstudent/EasyOCR.git
 ```
 
 Or, for development, use [uv](https://docs.astral.sh/uv/) with the committed lockfile

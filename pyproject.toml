@@ -26,7 +26,6 @@ classifiers = [
 dependencies = [
     "numpy>=2.2.6",
     "opencv-python-headless>=5.0.0.93",
-    "packaging>=26.3",
     "pillow>=12.3.0",
     "pyclipper>=1.4.0",
     "python-bidi>=0.6.11",
@@ -40,8 +39,8 @@ dependencies = [
 easyocr = "easyocr.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/jaidedai/easyocr"
-Repository = "https://github.com/jaidedai/easyocr.git"
+Homepage = "https://github.com/dnstudent/EasyOCR"
+Repository = "https://github.com/dnstudent/EasyOCR.git"
 
 [project.optional-dependencies]
 export = [
