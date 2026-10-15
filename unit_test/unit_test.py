@@ -191,8 +191,11 @@ class UnitTest:
                     test['method'] = '.'.join(test['method'].split('.')[1:])
                 test_method = self.get_nested_attr(self, test['method'])
                 
-                test['input'] = [(self.get_nested_attr(self, '.'.join(input_.split('.')[1:])) 
+                test['input'] = [(self.get_nested_attr(self, '.'.join(input_.split('.')[1:]))
                                  if input_.startswith('unit_test.') else input_) if isinstance(input_, str) else input_ for input_ in test['input']]
+                # reference inputs were recorded on a CUDA machine; run on the reader's device instead
+                active_device = getattr(getattr(self.easyocr, 'ocr', None), 'device', 'cpu')
+                test['input'] = [active_device if isinstance(input_, str) and input_ == 'cuda' else input_ for input_ in test['input']]
                 if verbose > 3:
                     print("###### Input: {}".format(test['input']))
                 results = test_method(*test['input'])

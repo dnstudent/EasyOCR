@@ -1,3 +1,11 @@
+- 15 October 2026 - Version 1.7.3 (torch 2.14 / uv migration)
+    - Migrate to `pyproject.toml` (hatchling) with uv; commit `uv.lock`; drop `setup.py`, `requirements.txt`, `MANIFEST.in`
+    - Target torch 2.14 / torchvision 0.29 on Python 3.10-3.14 (verified on 3.14); replace removed `torch.utils.model_zoo`, deprecated `torch.quantization` and `torch.cuda.amp`
+    - MPS is a first-class inference device on Apple Silicon (identical output to CPU, ~4.7x faster in our measurements)
+    - Rewrite ONNX export for the dynamo exporter; add CTC recognizer export (dynamic batch, fixed 600px width); validate with onnxruntime incl. the CoreML execution provider on macOS
+    - Drop scipy and scikit-image dependencies; OpenCV covers their use cases (equivalence verified against the old implementations)
+    - Drop all Python 2 compatibility idioms
+    - Trainer (non-craft): device auto-detect cuda -> mps -> cpu, torch.amp (CUDA-only AMP), guarded prefetch/pin_memory; keep `module.*` checkpoint key format
 - 24 September 2024 - Version 1.7.2
     - Fix several compatibilities
 - 4 September 2023 - Version 1.7.1

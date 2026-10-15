@@ -46,9 +46,49 @@ For the latest development release:
 pip install git+https://github.com/JaidedAI/EasyOCR.git
 ```
 
+Or, for development, use [uv](https://docs.astral.sh/uv/) with the committed lockfile
+(requires Python 3.10+; the project targets torch 2.14 / torchvision 0.29):
+
+``` bash
+uv sync --all-extras
+uv run python -c "import easyocr; print(easyocr.__version__)"
+```
+
+Optional extras: `easyocr[export]` adds ONNX export (onnx, onnxruntime, onnxscript),
+`easyocr[dbnet-dcn]` adds ninja for compiling the DBNet deformable-conv op.
+
 Note 1: For Windows, please install torch and torchvision first by following the official instructions here https://pytorch.org. On the pytorch website, be sure to select the right CUDA version you have. If you intend to run on CPU mode only, select `CUDA = None`.
 
 Note 2: We also provide a Dockerfile [here](https://github.com/JaidedAI/EasyOCR/blob/master/Dockerfile).
+
+Note 3: scipy and scikit-image are no longer dependencies; OpenCV covers their use
+cases in this package.
+
+### Apple Silicon (MPS)
+
+`Reader` automatically uses the MPS backend on Apple Silicon when CUDA is not
+available — nothing to configure:
+
+``` python
+reader = easyocr.Reader(['en'])  # picks cuda > mps > cpu automatically
+# or force a device explicitly:
+reader = easyocr.Reader(['en'], gpu='mps')
+```
+
+### ONNX export
+
+Both the CRAFT detector and the CTC recognizer can be exported to ONNX with the
+torch dynamo exporter and validated against onnxruntime (the CoreML execution
+provider is used for validation on macOS when available):
+
+``` bash
+uv run --extra export python -m easyocr.export -s detector.onnx -r recognizer.onnx -d -l en
+```
+
+The detector export has dynamic batch/height/width. The recognizer export has a
+dynamic batch with a fixed 600px input width — pad crops to that width before
+inference (the torch path pads the same way). A native MLX port is planned but
+not available yet.
 
 ## Usage
 
