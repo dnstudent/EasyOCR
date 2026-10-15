@@ -8,14 +8,15 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.optim as optim
 import torch.utils.data
-from torch.cuda.amp import autocast, GradScaler
 import numpy as np
 
 from utils import CTCLabelConverter, AttnLabelConverter, Averager
 from dataset import hierarchical_dataset, AlignCollate, Batch_Balanced_Dataset
 from model import Model
 from test import validation
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available()
+                      else 'mps' if torch.backends.mps.is_available()
+                      else 'cpu')
 
 def count_parameters(model):
     print("Modules, Parameters")
@@ -42,11 +43,14 @@ def train(opt, show_number = 2, amp=False):
     log = open(f'./saved_models/{opt.experiment_name}/log_dataset.txt', 'a', encoding="utf8")
     AlignCollate_valid = AlignCollate(imgH=opt.imgH, imgW=opt.imgW, keep_ratio_with_pad=opt.PAD, contrast_adjust=opt.contrast_adjust)
     valid_dataset, valid_dataset_log = hierarchical_dataset(root=opt.valid_data, opt=opt)
-    valid_loader = torch.utils.data.DataLoader(
-        valid_dataset, batch_size=min(32, opt.batch_size),
-        shuffle=True,  # 'True' to check training progress with validation function.
-        num_workers=int(opt.workers), prefetch_factor=512,
-        collate_fn=AlignCollate_valid, pin_memory=True)
+    loader_kwargs = dict(batch_size=min(32, opt.batch_size),
+                         shuffle=True,  # 'True' to check training progress with validation function.
+                         num_workers=int(opt.workers),
+                         collate_fn=AlignCollate_valid,
+                         pin_memory=device.type == 'cuda')
+    if loader_kwargs['num_workers'] > 0:
+        loader_kwargs['prefetch_factor'] = 512
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, **loader_kwargs)
     log.write(valid_dataset_log)
     print('-' * 80)
     log.write('-' * 80 + '\n')
@@ -67,7 +71,7 @@ def train(opt, show_number = 2, amp=False):
           opt.SequenceModeling, opt.Prediction)
 
     if opt.saved_model != '':
-        pretrained_dict = torch.load(opt.saved_model)
+        pretrained_dict = torch.load(opt.saved_model, map_location=device, weights_only=False)
         if opt.new_prediction:
             model.Prediction = nn.Linear(model.SequenceModeling_output, len(pretrained_dict['module.Prediction.weight']))  
         
@@ -169,15 +173,17 @@ def train(opt, show_number = 2, amp=False):
     best_norm_ED = -1
     i = start_iter
 
-    scaler = GradScaler()
+    # AMP is CUDA-only: torch.amp.GradScaler has no MPS implementation
+    use_amp = amp and device.type == 'cuda'
+    scaler = torch.amp.GradScaler('cuda') if use_amp else None
     t1= time.time()
-        
+
     while(True):
         # train part
         optimizer.zero_grad(set_to_none=True)
-        
-        if amp:
-            with autocast():
+
+        if use_amp:
+            with torch.amp.autocast('cuda'):
                 image_tensors, labels = train_dataset.get_batch()
                 image = image_tensors.to(device)
                 text, length = converter.encode(labels, batch_max_length=opt.batch_max_length)

@@ -349,8 +349,8 @@ class Averager(object):
         self.reset()
 
     def add(self, v):
-        count = v.data.numel()
-        v = v.data.sum()
+        count = v.numel()
+        v = v.sum()
         self.n_count += count
         self.sum += v
 

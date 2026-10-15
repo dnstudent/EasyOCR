@@ -73,11 +73,14 @@ class Batch_Balanced_Dataset(object):
             batch_size_list.append(str(_batch_size))
             Total_batch_size += _batch_size
 
-            _data_loader = torch.utils.data.DataLoader(
-                _dataset, batch_size=_batch_size,
-                shuffle=True,
-                num_workers=int(opt.workers), #prefetch_factor=2,persistent_workers=True,
-                collate_fn=_AlignCollate, pin_memory=True)
+            _loader_kwargs = dict(batch_size=_batch_size,
+                                  shuffle=True,
+                                  num_workers=int(opt.workers),
+                                  collate_fn=_AlignCollate,
+                                  pin_memory=torch.cuda.is_available())
+            if _loader_kwargs['num_workers'] > 0:
+                _loader_kwargs['prefetch_factor'] = 512
+            _data_loader = torch.utils.data.DataLoader(_dataset, **_loader_kwargs)
             self.data_loader_list.append(_data_loader)
             self.dataloader_iter_list.append(iter(_data_loader))
 
@@ -190,7 +193,7 @@ class OCRDataset(Dataset):
 
 class ResizeNormalize(object):
 
-    def __init__(self, size, interpolation=Image.BICUBIC):
+    def __init__(self, size, interpolation=Image.Resampling.BICUBIC):
         self.size = size
         self.interpolation = interpolation
         self.toTensor = transforms.ToTensor()
@@ -255,7 +258,7 @@ class AlignCollate(object):
                 else:
                     resized_w = math.ceil(self.imgH * ratio)
 
-                resized_image = image.resize((resized_w, self.imgH), Image.BICUBIC)
+                resized_image = image.resize((resized_w, self.imgH), Image.Resampling.BICUBIC)
                 resized_images.append(transform(resized_image))
                 # resized_image.save('./image_test/%d_test.jpg' % w)
 

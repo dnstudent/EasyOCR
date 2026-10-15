@@ -58,3 +58,10 @@ packages = ["easyocr"]
 
 [tool.hatch.build.targets.sdist]
 include = ["easyocr", "LICENSE", "README.md"]
+
+[dependency-groups]
+trainer = [
+    "natsort>=8.4.0",
+    "nltk>=3.10.3",
+    "pandas>=2.3.3",
+]
