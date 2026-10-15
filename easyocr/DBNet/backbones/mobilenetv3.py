@@ -25,7 +25,7 @@ def conv_1x1_bn(inp, oup, conv_layer=nn.Conv2d, norm_layer=nn.BatchNorm2d, nlin_
 
 class Hswish(nn.Module):
     def __init__(self, inplace=True):
-        super(Hswish, self).__init__()
+        super().__init__()
         self.inplace = inplace
 
     def forward(self, x):
@@ -34,7 +34,7 @@ class Hswish(nn.Module):
 
 class Hsigmoid(nn.Module):
     def __init__(self, inplace=True):
-        super(Hsigmoid, self).__init__()
+        super().__init__()
         self.inplace = inplace
 
     def forward(self, x):
@@ -43,7 +43,7 @@ class Hsigmoid(nn.Module):
 
 class SEModule(nn.Module):
     def __init__(self, channel, reduction=4):
-        super(SEModule, self).__init__()
+        super().__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
             nn.Linear(channel, channel // reduction, bias=False),
@@ -62,7 +62,7 @@ class SEModule(nn.Module):
 
 class Identity(nn.Module):
     def __init__(self, channel):
-        super(Identity, self).__init__()
+        super().__init__()
 
     def forward(self, x):
         return x
@@ -75,7 +75,7 @@ def make_divisible(x, divisible_by=8):
 
 class MobileBottleneck(nn.Module):
     def __init__(self, inp, oup, kernel, stride, exp, se=False, nl='RE'):
-        super(MobileBottleneck, self).__init__()
+        super().__init__()
         assert stride in [1, 2]
         assert kernel in [3, 5]
         padding = (kernel - 1) // 2
@@ -118,7 +118,7 @@ class MobileBottleneck(nn.Module):
 
 class MobileNetV3(nn.Module):
     def __init__(self, n_class=1000, input_size=224, dropout=0.8, mode='small', width_mult=1.0):
-        super(MobileNetV3, self).__init__()
+        super().__init__()
         input_channel = 16
         last_channel = 1280
         if mode == 'large':

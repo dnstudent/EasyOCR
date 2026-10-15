@@ -20,7 +20,7 @@ def init_weights(modules):
 
 class vgg16_bn(torch.nn.Module):
     def __init__(self, pretrained=True, freeze=True):
-        super(vgg16_bn, self).__init__()
+        super().__init__()
         vgg_pretrained_features = models.vgg16_bn(
             weights=models.VGG16_BN_Weights.DEFAULT if pretrained else None
         ).features
@@ -76,7 +76,7 @@ class vgg16_bn(torch.nn.Module):
 class BidirectionalLSTM(nn.Module):
 
     def __init__(self, input_size, hidden_size, output_size):
-        super(BidirectionalLSTM, self).__init__()
+        super().__init__()
         self.rnn = nn.LSTM(input_size, hidden_size, bidirectional=True, batch_first=True)
         self.linear = nn.Linear(hidden_size * 2, output_size)
 
@@ -96,7 +96,7 @@ class BidirectionalLSTM(nn.Module):
 class VGG_FeatureExtractor(nn.Module):
 
     def __init__(self, input_channel, output_channel=256):
-        super(VGG_FeatureExtractor, self).__init__()
+        super().__init__()
         self.output_channel = [int(output_channel / 8), int(output_channel / 4),
                                int(output_channel / 2), output_channel]
         self.ConvNet = nn.Sequential(
@@ -121,7 +121,7 @@ class ResNet_FeatureExtractor(nn.Module):
     """ FeatureExtractor of FAN (http://openaccess.thecvf.com/content_ICCV_2017/papers/Cheng_Focusing_Attention_Towards_ICCV_2017_paper.pdf) """
 
     def __init__(self, input_channel, output_channel=512):
-        super(ResNet_FeatureExtractor, self).__init__()
+        super().__init__()
         self.ConvNet = ResNet(input_channel, output_channel, BasicBlock, [1, 2, 5, 3])
 
     def forward(self, input):
@@ -131,7 +131,7 @@ class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
-        super(BasicBlock, self).__init__()
+        super().__init__()
         self.conv1 = self._conv3x3(inplanes, planes)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = self._conv3x3(planes, planes)
@@ -165,7 +165,7 @@ class BasicBlock(nn.Module):
 class ResNet(nn.Module):
 
     def __init__(self, input_channel, output_channel, block, layers):
-        super(ResNet, self).__init__()
+        super().__init__()
 
         self.output_channel_block = [int(output_channel / 4), int(output_channel / 2), output_channel, output_channel]
 

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class ScaleChannelAttention(nn.Module):
     def __init__(self, in_planes, out_planes, num_features, init_weight=True):
-        super(ScaleChannelAttention, self).__init__()
+        super().__init__()
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         print(self.avgpool)
         self.fc1 = nn.Conv2d(in_planes, out_planes, 1, bias=False)
@@ -33,7 +33,7 @@ class ScaleChannelAttention(nn.Module):
 
 class ScaleChannelSpatialAttention(nn.Module):
     def __init__(self, in_planes, out_planes, num_features, init_weight=True):
-        super(ScaleChannelSpatialAttention, self).__init__()
+        super().__init__()
         self.channel_wise = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Conv2d(in_planes, out_planes , 1, bias=False),
@@ -79,7 +79,7 @@ class ScaleChannelSpatialAttention(nn.Module):
 
 class ScaleSpatialAttention(nn.Module):
     def __init__(self, in_planes, out_planes, num_features, init_weight=True):
-        super(ScaleSpatialAttention, self).__init__()
+        super().__init__()
         self.spatial_wise = nn.Sequential(
             #Nx1xHxW
             nn.Conv2d(1, 1, 3, bias=False, padding=1),
@@ -112,7 +112,7 @@ class ScaleSpatialAttention(nn.Module):
 
 class ScaleFeatureSelection(nn.Module):
     def __init__(self, in_channels, inter_channels , out_features_num=4, attention_type='scale_spatial'):
-        super(ScaleFeatureSelection, self).__init__()
+        super().__init__()
         self.in_channels=in_channels
         self.inter_channels = inter_channels
         self.out_features_num = out_features_num

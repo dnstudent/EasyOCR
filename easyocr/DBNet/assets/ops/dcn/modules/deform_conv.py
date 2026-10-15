@@ -19,7 +19,7 @@ class DeformConv(nn.Module):
                  groups=1,
                  deformable_groups=1,
                  bias=False):
-        super(DeformConv, self).__init__()
+        super().__init__()
 
         assert not bias
         assert in_channels % groups == 0, \
@@ -59,7 +59,7 @@ class DeformConv(nn.Module):
 class DeformConvPack(DeformConv):
 
     def __init__(self, *args, **kwargs):
-        super(DeformConvPack, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.conv_offset = nn.Conv2d(
             self.in_channels,
@@ -93,7 +93,7 @@ class ModulatedDeformConv(nn.Module):
                  groups=1,
                  deformable_groups=1,
                  bias=True):
-        super(ModulatedDeformConv, self).__init__()
+        super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = _pair(kernel_size)
@@ -131,7 +131,7 @@ class ModulatedDeformConv(nn.Module):
 class ModulatedDeformConvPack(ModulatedDeformConv):
 
     def __init__(self, *args, **kwargs):
-        super(ModulatedDeformConvPack, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.conv_offset_mask = nn.Conv2d(
             self.in_channels,

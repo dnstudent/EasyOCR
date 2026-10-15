@@ -5,7 +5,7 @@ import torch.nn.functional as F
 class PSS_Loss(nn.Module):
 
     def __init__(self, cls_loss):
-        super(PSS_Loss, self).__init__()
+        super().__init__()
         self.eps = 1e-6
         self.criterion = eval('self.' + cls_loss + '_loss')
 

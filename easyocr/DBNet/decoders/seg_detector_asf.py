@@ -18,7 +18,7 @@ class SegSpatialScaleDetector(nn.Module):
         smooth: If true, use bilinear instead of deconv.
         serial: If true, thresh prediction will combine segmentation result as input.
         '''
-        super(SegSpatialScaleDetector, self).__init__()
+        super().__init__()
         self.k = k
         self.serial = serial
         self.fpn = fpn

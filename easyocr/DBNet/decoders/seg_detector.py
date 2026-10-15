@@ -16,7 +16,7 @@ class SegDetector(nn.Module):
         smooth: If true, use bilinear instead of deconv.
         serial: If true, thresh prediction will combine segmentation result as input.
         '''
-        super(SegDetector, self).__init__()
+        super().__init__()
         self.k = k
         self.serial = serial
         self.up5 = nn.Upsample(scale_factor=2, mode='nearest')

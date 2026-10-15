@@ -7,7 +7,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 class Attention(nn.Module):
 
     def __init__(self, input_size, hidden_size, num_classes):
-        super(Attention, self).__init__()
+        super().__init__()
         self.attention_cell = AttentionCell(input_size, hidden_size, num_classes)
         self.hidden_size = hidden_size
         self.num_classes = num_classes
@@ -61,7 +61,7 @@ class Attention(nn.Module):
 class AttentionCell(nn.Module):
 
     def __init__(self, input_size, hidden_size, num_embeddings):
-        super(AttentionCell, self).__init__()
+        super().__init__()
         self.i2h = nn.Linear(input_size, hidden_size, bias=False)
         self.h2h = nn.Linear(hidden_size, hidden_size)  # either i2i or h2h should have bias
         self.score = nn.Linear(hidden_size, 1, bias=False)

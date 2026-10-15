@@ -18,7 +18,7 @@ class TPS_SpatialTransformerNetwork(nn.Module):
         output:
             batch_I_r: rectified image [batch_size x I_channel_num x I_r_height x I_r_width]
         """
-        super(TPS_SpatialTransformerNetwork, self).__init__()
+        super().__init__()
         self.F = F
         self.I_size = I_size
         self.I_r_size = I_r_size  # = (I_r_height, I_r_width)
@@ -39,7 +39,7 @@ class LocalizationNetwork(nn.Module):
     """ Localization Network of RARE, which predicts C' (K x 2) from I (I_width x I_height) """
 
     def __init__(self, F, I_channel_num):
-        super(LocalizationNetwork, self).__init__()
+        super().__init__()
         self.F = F
         self.I_channel_num = I_channel_num
         self.conv = nn.Sequential(
@@ -84,7 +84,7 @@ class GridGenerator(nn.Module):
 
     def __init__(self, F, I_r_size):
         """ Generate P_hat and inv_delta_C for later """
-        super(GridGenerator, self).__init__()
+        super().__init__()
         self.eps = 1e-6
         self.I_r_height, self.I_r_width = I_r_size
         self.F = F

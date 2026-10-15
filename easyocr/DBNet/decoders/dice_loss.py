@@ -12,7 +12,7 @@ class DiceLoss(nn.Module):
     diversity bwtween tow heatmaps.
     '''
     def __init__(self, eps=1e-6):
-        super(DiceLoss, self).__init__()
+        super().__init__()
         self.eps = eps
 
     def forward(self, pred: torch.Tensor, gt, mask, weights=None):
@@ -48,7 +48,7 @@ class LeakyDiceLoss(nn.Module):
     The coverage and union are computed separately.
     '''
     def __init__(self, eps=1e-6, coverage_scale=5.0):
-        super(LeakyDiceLoss, self).__init__()
+        super().__init__()
         self.eps = eps
         self.coverage_scale = coverage_scale
 

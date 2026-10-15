@@ -14,7 +14,7 @@ class DeformRoIPooling(nn.Module):
                  part_size=None,
                  sample_per_part=4,
                  trans_std=.0):
-        super(DeformRoIPooling, self).__init__()
+        super().__init__()
         self.spatial_scale = spatial_scale
         self.out_size = out_size
         self.out_channels = out_channels
@@ -106,7 +106,7 @@ class ModulatedDeformRoIPoolingPack(DeformRoIPooling):
                  num_offset_fcs=3,
                  num_mask_fcs=2,
                  deform_fc_channels=1024):
-        super(ModulatedDeformRoIPoolingPack, self).__init__(
+        super().__init__(
             spatial_scale, out_size, out_channels, no_trans, group_size,
             part_size, sample_per_part, trans_std)
 

@@ -22,7 +22,7 @@ class BalanceCrossEntropyLoss(nn.Module):
     '''
 
     def __init__(self, negative_ratio=3.0, eps=1e-6):
-        super(BalanceCrossEntropyLoss, self).__init__()
+        super().__init__()
         self.negative_ratio = negative_ratio
         self.eps = eps
 

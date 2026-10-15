@@ -41,7 +41,7 @@ class DiceLoss(nn.Module):
     '''
 
     def __init__(self, eps=1e-6):
-        super(DiceLoss, self).__init__()
+        super().__init__()
         from .dice_loss import DiceLoss as Loss
         self.loss = Loss(eps)
 
@@ -57,7 +57,7 @@ class BalanceBCELoss(nn.Module):
     '''
 
     def __init__(self, eps=1e-6):
-        super(BalanceBCELoss, self).__init__()
+        super().__init__()
         from .balance_cross_entropy_loss import BalanceCrossEntropyLoss
         self.loss = BalanceCrossEntropyLoss()
 
@@ -73,7 +73,7 @@ class AdaptiveDiceLoss(nn.Module):
     '''
 
     def __init__(self, eps=1e-6):
-        super(AdaptiveDiceLoss, self).__init__()
+        super().__init__()
         from .dice_loss import DiceLoss
         self.main_loss = DiceLoss(eps)
         self.thresh_loss = DiceLoss(eps)
@@ -99,7 +99,7 @@ class AdaptiveInstanceDiceLoss(nn.Module):
     '''
 
     def __init__(self, iou_thresh=0.2, thresh=0.3):
-        super(AdaptiveInstanceDiceLoss, self).__init__()
+        super().__init__()
         from .dice_loss import InstanceDiceLoss, DiceLoss
         self.main_loss = DiceLoss()
         self.main_instance_loss = InstanceDiceLoss()
@@ -140,7 +140,7 @@ class L1DiceLoss(nn.Module):
     '''
 
     def __init__(self, eps=1e-6, l1_scale=10):
-        super(L1DiceLoss, self).__init__()
+        super().__init__()
         self.dice_loss = AdaptiveDiceLoss(eps=eps)
         from .l1_loss import MaskL1Loss
         self.l1_loss = MaskL1Loss()
@@ -179,7 +179,7 @@ class L1BalanceCELoss(nn.Module):
     '''
 
     def __init__(self, eps=1e-6, l1_scale=10, bce_scale=5):
-        super(L1BalanceCELoss, self).__init__()
+        super().__init__()
         from .dice_loss import DiceLoss
         from .l1_loss import MaskL1Loss
         from .balance_cross_entropy_loss import BalanceCrossEntropyLoss
@@ -211,7 +211,7 @@ class L1BCEMiningLoss(nn.Module):
     '''
 
     def __init__(self, eps=1e-6, l1_scale=10, bce_scale=5):
-        super(L1BCEMiningLoss, self).__init__()
+        super().__init__()
         from .dice_loss import DiceLoss
         from .l1_loss import MaskL1Loss
         from .balance_cross_entropy_loss import BalanceCrossEntropyLoss
@@ -245,7 +245,7 @@ class L1LeakyDiceLoss(nn.Module):
     '''
 
     def __init__(self, eps=1e-6, coverage_scale=5, l1_scale=10):
-        super(L1LeakyDiceLoss, self).__init__()
+        super().__init__()
         from .dice_loss import DiceLoss, LeakyDiceLoss
         from .l1_loss import MaskL1Loss
         self.main_loss = LeakyDiceLoss(coverage_scale=coverage_scale)

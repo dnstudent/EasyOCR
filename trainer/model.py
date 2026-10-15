@@ -7,7 +7,7 @@ from modules.prediction import Attention
 class Model(nn.Module):
 
     def __init__(self, opt):
-        super(Model, self).__init__()
+        super().__init__()
         self.opt = opt
         self.stages = {'Trans': opt.Transformation, 'Feat': opt.FeatureExtraction,
                        'Seq': opt.SequenceModeling, 'Pred': opt.Prediction}

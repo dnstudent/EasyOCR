@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class MaskL1Loss(nn.Module):
     def __init__(self):
-        super(MaskL1Loss, self).__init__()
+        super().__init__()
 
     def forward(self, pred: torch.Tensor, gt, mask):
         mask_sum = mask.sum()
@@ -17,7 +17,7 @@ class MaskL1Loss(nn.Module):
 
 class BalanceL1Loss(nn.Module):
     def __init__(self, negative_ratio=3.):
-        super(BalanceL1Loss, self).__init__()
+        super().__init__()
         self.negative_ratio = negative_ratio
 
     def forward(self, pred: torch.Tensor, gt, mask):

@@ -4,7 +4,7 @@ from .modules import ResNet_FeatureExtractor, BidirectionalLSTM
 class Model(nn.Module):
 
     def __init__(self, input_channel, output_channel, hidden_size, num_class):
-        super(Model, self).__init__()
+        super().__init__()
         """ FeatureExtraction """
         self.FeatureExtraction = ResNet_FeatureExtractor(input_channel, output_channel)
         self.FeatureExtraction_output = output_channel  # int(imgH/16-1) * 512

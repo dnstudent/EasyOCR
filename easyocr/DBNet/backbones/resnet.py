@@ -32,7 +32,7 @@ class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, dcn=None):
-        super(BasicBlock, self).__init__()
+        super().__init__()
         self.with_dcn = dcn is not None
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = BatchNorm2d(planes)
@@ -106,7 +106,7 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, dcn=None):
-        super(Bottleneck, self).__init__()
+        super().__init__()
         self.with_dcn = dcn is not None
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = BatchNorm2d(planes)
@@ -185,7 +185,7 @@ class ResNet(nn.Module):
         self.dcn = dcn
         self.stage_with_dcn = stage_with_dcn
         self.inplanes = 64
-        super(ResNet, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = BatchNorm2d(64)
