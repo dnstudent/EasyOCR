@@ -4,7 +4,6 @@ import numpy as np
 import math
 import cv2
 from PIL import Image, JpegImagePlugin
-from scipy import ndimage
 import hashlib
 import sys, os
 from zipfile import ZipFile
@@ -582,9 +581,9 @@ def compute_ratio_and_resize(img,width,height,model_height):
     ratio = width/height
     if ratio<1.0:
         ratio = calculate_ratio(width,height)
-        img = cv2.resize(img,(model_height,int(model_height*ratio)), interpolation=Image.Resampling.LANCZOS)
+        img = cv2.resize(img,(model_height,int(model_height*ratio)), interpolation=cv2.INTER_LANCZOS4)
     else:
-        img = cv2.resize(img,(int(model_height*ratio),model_height),interpolation=Image.Resampling.LANCZOS)
+        img = cv2.resize(img,(int(model_height*ratio),model_height),interpolation=cv2.INTER_LANCZOS4)
     return img,ratio
 
 
@@ -810,16 +809,36 @@ def reformat_input_batched(image, n_width=None, n_height=None):
 
 
 
+def rotate_image_full_canvas(img, angle, interpolation=cv2.INTER_CUBIC, border_value=0):
+    """Rotate an image keeping the whole content visible, like scipy.ndimage.rotate(..., reshape=True)."""
+    # exact multiples of 90 degrees are lossless in OpenCV
+    if angle % 90 == 0:
+        code = {0: None,
+                90: cv2.ROTATE_90_COUNTERCLOCKWISE,
+                180: cv2.ROTATE_180,
+                270: cv2.ROTATE_90_CLOCKWISE}[((angle % 360) + 360) % 360]
+        return img.copy() if code is None else cv2.rotate(img, code)
+    height, width = img.shape[:2]
+    center = (width / 2.0, height / 2.0)
+    matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+    cos, sin = abs(matrix[0, 0]), abs(matrix[0, 1])
+    new_w = int(np.ceil(height * sin + width * cos))
+    new_h = int(np.ceil(height * cos + width * sin))
+    matrix[0, 2] += new_w / 2.0 - center[0]
+    matrix[1, 2] += new_h / 2.0 - center[1]
+    return cv2.warpAffine(img, matrix, (new_w, new_h), flags=interpolation,
+                          borderMode=cv2.BORDER_CONSTANT, borderValue=border_value)
+
 def make_rotated_img_list(rotationInfo, img_list):
 
     result_img_list = img_list[:]
 
     # add rotated images to original image_list
     max_ratio=1
-    
+
     for angle in rotationInfo:
-        for img_info in img_list : 
-            rotated = ndimage.rotate(img_info[1], angle, reshape=True) 
+        for img_info in img_list :
+            rotated = rotate_image_full_canvas(img_info[1], angle)
             height,width = rotated.shape
             ratio = calculate_ratio(width,height)
             max_ratio = max(max_ratio,ratio)

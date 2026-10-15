@@ -4,14 +4,18 @@ MIT License
 """
 
 import numpy as np
-from skimage import io
 import cv2
 
 def loadImage(img_file):
-    img = io.imread(img_file)           # RGB order
-    if img.shape[0] == 2: img = img[0]
-    if len(img.shape) == 2 : img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-    if img.shape[2] == 4:   img = img[:,:,:3]
+    img = cv2.imread(img_file, cv2.IMREAD_UNCHANGED)  # BGR/BGRA order
+    if img is None:
+        raise IOError('cannot read image file: ' + img_file)
+    if img.ndim == 2:
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    else:
+        if img.shape[2] == 4:   # drop alpha
+            img = img[:, :, :3]
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = np.array(img)
 
     return img

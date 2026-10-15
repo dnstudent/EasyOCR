@@ -6,7 +6,6 @@ MIT License
 import numpy as np
 import cv2
 import math
-from scipy.ndimage import label
 
 """ auxiliary functions """
 # unwarp corodinates
@@ -44,7 +43,8 @@ def getDetBoxes_core(textmap, linkmap, text_threshold, link_threshold, low_text,
         segmap[labels==k] = 255
         if estimate_num_chars:
             _, character_locs = cv2.threshold((textmap - linkmap) * segmap /255., text_threshold, 1, 0)
-            _, n_chars = label(character_locs)
+            # connected component count minus background, 4-connectivity like scipy.ndimage.label
+            n_chars = cv2.connectedComponents(character_locs.astype(np.uint8), connectivity=4)[0] - 1
             mapper.append(n_chars)
         else:
             mapper.append(k)

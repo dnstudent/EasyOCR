@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 import cv2
-from scipy import ndimage
 
 
 class DiceLoss(nn.Module):
@@ -107,7 +106,9 @@ class InstanceDiceLoss(DiceLoss):
             instance = tensor[batch_index]
             if blur is not None:
                 instance = blur(instance)
-            lable_map, instance_count = ndimage.label(instance[0])
+            # cv2 needs an 8-bit mask; 4-connectivity matches scipy.ndimage.label
+            n_labels, lable_map = cv2.connectedComponents((instance[0] != 0).astype(np.uint8), connectivity=4)
+            instance_count = n_labels - 1
             instance_count = min(self.max_regions, instance_count)
             instance_map = []
             for index in range(1, instance_count):
